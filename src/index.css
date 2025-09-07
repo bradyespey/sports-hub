@@ -2,41 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Espey Pick'em NFL Design System - All colors MUST be HSL */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* NFL Dark Theme */
+    --background: 222 15% 8%;
+    --foreground: 210 20% 95%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 222 15% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 222 15% 10%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* NFL Primary - Bold Blue */
+    --primary: 213 94% 68%;
+    --primary-foreground: 222 15% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Subtle Gray */
+    --secondary: 222 15% 15%;
+    --secondary-foreground: 210 20% 90%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 222 15% 12%;
+    --muted-foreground: 215 15% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* NFL Orange Accent */
+    --accent: 24 100% 65%;
+    --accent-foreground: 222 15% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Win/Loss Colors */
+    --success: 142 69% 58%;
+    --success-foreground: 222 15% 8%;
+    
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 210 20% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --warning: 45 93% 58%;
+    --warning-foreground: 222 15% 8%;
 
-    --radius: 0.5rem;
+    --border: 222 15% 15%;
+    --input: 222 15% 15%;
+    --ring: 213 94% 68%;
+
+    --radius: 0.75rem;
+
+    /* NFL Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(213 94% 68%), hsl(24 100% 65%));
+    --gradient-card: linear-gradient(145deg, hsl(222 15% 10%), hsl(222 15% 12%));
+    --gradient-winner: linear-gradient(135deg, hsl(142 69% 58%), hsl(142 69% 48%));
+    
+    /* Shadows */
+    --shadow-glow: 0 0 30px hsl(213 94% 68% / 0.3);
+    --shadow-card: 0 4px 20px hsl(222 15% 3% / 0.5);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +122,61 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  /* NFL Team Logo Styles */
+  .team-logo {
+    @apply w-8 h-8 rounded-sm object-contain;
+  }
+  
+  .team-logo-large {
+    @apply w-12 h-12 rounded-md object-contain;
+  }
+
+  /* Game Card Styles */
+  .game-card {
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-card);
+    transition: var(--transition-smooth);
+  }
+  
+  .game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Pick Button Styles */
+  .pick-selected {
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-glow);
+    transform: scale(1.02);
+  }
+  
+  .pick-winner {
+    background: var(--gradient-winner);
+    animation: pulse 2s infinite;
+  }
+
+  /* Live Indicator */
+  .live-pulse::before {
+    content: '';
+    @apply absolute -inset-1 bg-red-500 rounded-full animate-ping opacity-75;
+  }
+  
+  .live-pulse {
+    @apply relative inline-flex rounded-full w-3 h-3 bg-red-500;
+  }
+
+  /* Score Animation */
+  .score-update {
+    animation: scoreFlash 0.5s ease-in-out;
+  }
+  
+  @keyframes scoreFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; background-color: hsl(var(--accent)); }
   }
 }

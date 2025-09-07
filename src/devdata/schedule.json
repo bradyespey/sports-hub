@@ -1,0 +1,60 @@
+{
+  "2025_01": [
+    {
+      "gameId": "2025-W01-BUF-LAR",
+      "season": 2025,
+      "week": 1,
+      "kickoffUtc": "2025-01-19T18:00:00Z",
+      "homeTeam": "LAR",
+      "awayTeam": "BUF",
+      "status": "final"
+    },
+    {
+      "gameId": "2025-W01-KC-BAL",
+      "season": 2025,
+      "week": 1,
+      "kickoffUtc": "2025-01-19T21:30:00Z",
+      "homeTeam": "BAL",
+      "awayTeam": "KC",
+      "status": "final"
+    },
+    {
+      "gameId": "2025-W01-DAL-CLE",
+      "season": 2025,
+      "week": 1,
+      "kickoffUtc": "2025-01-26T18:00:00Z",
+      "homeTeam": "CLE",
+      "awayTeam": "DAL",
+      "status": "scheduled"
+    }
+  ],
+  "2025_02": [
+    {
+      "gameId": "2025-W02-DAL-CLE",
+      "season": 2025,
+      "week": 2,
+      "kickoffUtc": "2025-02-02T18:00:00Z",
+      "homeTeam": "CLE",
+      "awayTeam": "DAL",
+      "status": "scheduled"
+    },
+    {
+      "gameId": "2025-W02-MIA-NYJ",
+      "season": 2025,
+      "week": 2,
+      "kickoffUtc": "2025-02-02T21:30:00Z",
+      "homeTeam": "NYJ",
+      "awayTeam": "MIA",
+      "status": "scheduled"
+    },
+    {
+      "gameId": "2025-W02-SF-GB",
+      "season": 2025,
+      "week": 2,
+      "kickoffUtc": "2025-02-09T18:00:00Z",
+      "homeTeam": "GB",
+      "awayTeam": "SF",
+      "status": "scheduled"
+    }
+  ]
+}

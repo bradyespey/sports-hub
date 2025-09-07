@@ -1,0 +1,48 @@
+{
+  "2025_01": [
+    {
+      "gameId": "2025-W01-BUF-LAR",
+      "spreadHome": -3.5,
+      "spreadAway": 3.5,
+      "total": 47.5,
+      "provider": "DraftKings"
+    },
+    {
+      "gameId": "2025-W01-KC-BAL",
+      "spreadHome": -2.5,
+      "spreadAway": 2.5,
+      "total": 44.5,
+      "provider": "DraftKings"
+    },
+    {
+      "gameId": "2025-W01-DAL-CLE",
+      "spreadHome": -6.5,
+      "spreadAway": 6.5,
+      "total": 42.5,
+      "provider": "DraftKings"
+    }
+  ],
+  "2025_02": [
+    {
+      "gameId": "2025-W02-DAL-CLE",
+      "spreadHome": -4.5,
+      "spreadAway": 4.5,
+      "total": 45.5,
+      "provider": "DraftKings"
+    },
+    {
+      "gameId": "2025-W02-MIA-NYJ",
+      "spreadHome": -1.5,
+      "spreadAway": 1.5,
+      "total": 41.5,
+      "provider": "DraftKings"
+    },
+    {
+      "gameId": "2025-W02-SF-GB",
+      "spreadHome": -3.5,
+      "spreadAway": 3.5,
+      "total": 48.5,
+      "provider": "DraftKings"
+    }
+  ]
+}

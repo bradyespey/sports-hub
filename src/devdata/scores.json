@@ -1,0 +1,40 @@
+[
+  {
+    "gameId": "2025-W01-BUF-LAR",
+    "homeScore": 24,
+    "awayScore": 31,
+    "status": "final"
+  },
+  {
+    "gameId": "2025-W01-KC-BAL",
+    "homeScore": 17,
+    "awayScore": 27,
+    "status": "final"
+  },
+  {
+    "gameId": "2025-W01-DAL-CLE",
+    "homeScore": 0,
+    "awayScore": 0,
+    "status": "scheduled"
+  },
+  {
+    "gameId": "2025-W02-DAL-CLE",
+    "homeScore": 0,
+    "awayScore": 0,
+    "status": "scheduled"
+  },
+  {
+    "gameId": "2025-W02-MIA-NYJ",
+    "homeScore": 14,
+    "awayScore": 10,
+    "status": "live",
+    "quarter": 3,
+    "timeRemaining": "8:45"
+  },
+  {
+    "gameId": "2025-W02-SF-GB",
+    "homeScore": 0,
+    "awayScore": 0,
+    "status": "scheduled"
+  }
+]

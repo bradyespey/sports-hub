@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Weeks are readable by any authenticated user
+    match /weeks/{weekId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admins should write weeks (via seed script)
+    }
+    
+    // Games are readable by any authenticated user
+    match /games/{gameId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admins should write games (via seed script)
+    }
+    
+    // Users can only access their own picks
+    match /picks/{pickId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.uid;
+    }
+    
+    // Allow users to read picks for games they have picks in (for opponent reveal logic)
+    match /picks/{pickId} {
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/picks/$(request.resource.data.gameId)_$(request.auth.uid));
+    }
+  }
+}

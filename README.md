@@ -1,73 +1,152 @@
-# Welcome to your Lovable project
+# Espey Pick'em
 
-## Project info
+A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly outright winner predictions.
 
-**URL**: https://lovable.dev/projects/d8b7daab-b582-4c9e-9878-69ecc7d97e8c
+## Features
 
-## How can I edit this code?
+- 🏈 **Weekly NFL Picks** - Pick outright winners for each game
+- 🔒 **Strategic Reveal** - See opponent picks only after both submit AND game starts
+- 📊 **Live Scores** - Real-time game updates and standings
+- 🎯 **Spread Context** - View betting lines for informed picks
+- 📱 **Mobile First** - Responsive design optimized for phones
+- 🔐 **Google Auth** - Secure authentication with email allowlist
+- 🏆 **Fantasy Widget** - Optional integration with Sleeper/Yahoo (coming soon)
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Backend**: Firebase Auth + Firestore
+- **Deployment**: Netlify
+- **Data**: Provider pattern for Mock/HTTP data sources
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d8b7daab-b582-4c9e-9878-69ecc7d97e8c) and start prompting.
+## Local Development
 
-Changes made via Lovable will be committed automatically to this repo.
+1. **Clone and install**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd espey-pickem
+   npm install
+   ```
 
-**Use your preferred IDE**
+2. **Environment setup**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Firebase config and API keys
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+3. **Firebase setup**
+   - Create Firebase project
+   - Enable Authentication (Google provider)
+   - Create Firestore database
+   - Add authorized domains in Firebase Console
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+4. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-Follow these steps:
+## Environment Variables
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `VITE_FIREBASE_API_KEY` | Yes | Firebase API key | `AIza...` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Yes | Firebase auth domain | `project.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID | `espey-pickem` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Yes | Firebase storage bucket | `project.appspot.com` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase sender ID | `123456789` |
+| `VITE_FIREBASE_APP_ID` | Yes | Firebase app ID | `1:123:web:abc` |
+| `VITE_ALLOWED_EMAILS` | Yes | Comma-separated allowed emails | `user1@gmail.com,user2@gmail.com` |
+| `VITE_USE_MOCK` | No | Use mock data (true/false) | `true` |
+| `VITE_ODDS_API_URL` | No* | Odds API endpoint | `https://api.provider.com/v1` |
+| `VITE_ODDS_API_KEY` | No* | Odds API key | `your_api_key` |
+| `VITE_SCORES_API_URL` | No* | Scores API endpoint | `https://api.provider.com/v1` |
+| `VITE_SCORES_API_KEY` | No* | Scores API key | `your_api_key` |
+| `VITE_LOGO_CDN_BASE` | No | Team logos CDN | `https://cdn.com/logos` |
+| `VITE_FANTASY_PROVIDER` | No | Fantasy provider (sleeper/yahoo) | `sleeper` |
+| `VITE_FANTASY_LEAGUE_ID` | No** | Fantasy league ID | `123456789` |
+| `VITE_FANTASY_TEAM_ID_BRADY` | No** | Brady's team ID | `1` |
+| `VITE_FANTASY_TEAM_ID_JENNY` | No** | Jenny's team ID | `2` |
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+*Required when `VITE_USE_MOCK=false`  
+**Required when fantasy provider is enabled
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Deployment (Netlify)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. **Connect GitHub repo** to Netlify
+2. **Mirror environment variables** from .env to Netlify dashboard
+3. **Add authorized domains** in Firebase Console:
+   - `localhost:8080` (development)
+   - `your-netlify-domain.netlify.app` (production)
+   - Any custom domains
+
+## Data Sources
+
+### Mock Mode (Development)
+Set `VITE_USE_MOCK=true` to use local JSON data from `src/devdata/`:
+- No API keys required
+- Perfect for development and testing
+- Includes sample games, odds, and scores
+
+### HTTP Mode (Production)
+Set `VITE_USE_MOCK=false` and provide API credentials:
+- Requires valid API keys for odds and scores
+- Real-time data from external providers
+- Configure CDN for team logos
+
+## Database Setup
+
+1. **Deploy Firestore rules**
+   ```bash
+   firebase deploy --only firestore:rules,firestore:indexes
+   ```
+
+2. **Seed initial data**
+   ```bash
+   npm run seed
+   ```
+
+## Fantasy Integration
+
+### Sleeper (Ready)
+```env
+VITE_FANTASY_PROVIDER=sleeper
+VITE_FANTASY_LEAGUE_ID=your_league_id
+VITE_FANTASY_TEAM_ID_BRADY=1
+VITE_FANTASY_TEAM_ID_JENNY=2
 ```
 
-**Edit a file directly in GitHub**
+### Yahoo (Coming Soon)
+Requires server-side OAuth implementation via Netlify Functions.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Project Structure
 
-**Use GitHub Codespaces**
+```
+src/
+├── components/          # Reusable UI components
+├── devdata/            # Mock JSON data for development
+├── hooks/              # Custom React hooks
+├── lib/                # Utilities and Firebase config
+├── pages/              # Route components
+├── providers/          # Data provider implementations
+│   ├── interfaces.ts   # Provider contracts
+│   ├── mock/          # Mock implementations
+│   ├── http/          # HTTP implementations
+│   └── fantasy/       # Fantasy providers
+└── types/             # TypeScript type definitions
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Security
 
-## What technologies are used for this project?
+- **Authentication**: Google OAuth with email allowlist
+- **Firestore Rules**: User isolation and read/write permissions
+- **Pick Reveals**: Server-enforced logic prevents early reveals
+- **API Keys**: Environment variables only (never in source code)
 
-This project is built with:
+## Scripts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/d8b7daab-b582-4c9e-9878-69ecc7d97e8c) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run seed         # Seed Firestore with initial data
+```
