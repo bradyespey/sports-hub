@@ -1,4 +1,4 @@
-# Espey Pick'em
+# SportsHub
 
 A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly outright winner predictions.
 
@@ -23,8 +23,8 @@ A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly ou
 
 1. **Clone and install**
    ```bash
-   git clone <YOUR_GIT_URL>
-   cd espey-pickem
+   git clone https://github.com/bradyespey/sports-hub.git
+   cd sports-hub
    npm install
    ```
 
@@ -51,7 +51,7 @@ A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly ou
 |----------|----------|-------------|---------|
 | `VITE_FIREBASE_API_KEY` | Yes | Firebase API key | `AIza...` |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Yes | Firebase auth domain | `project.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID | `espey-pickem` |
+| `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID | `sportshub-9dad7` |
 | `VITE_FIREBASE_STORAGE_BUCKET` | Yes | Firebase storage bucket | `project.appspot.com` |
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase sender ID | `123456789` |
 | `VITE_FIREBASE_APP_ID` | Yes | Firebase app ID | `1:123:web:abc` |
@@ -76,8 +76,15 @@ A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly ou
 2. **Mirror environment variables** from .env to Netlify dashboard
 3. **Add authorized domains** in Firebase Console:
    - `localhost:8080` (development)
-   - `your-netlify-domain.netlify.app` (production)
-   - Any custom domains
+   - `espeysportshub.netlify.app` (production)
+   - `sportshub.theespeys.com` (custom domain)
+
+### Current Configuration
+- **Netlify Site**: espeysportshub
+- **Custom Domain**: sportshub.theespeys.com
+- **Firebase Project**: sportshub-9dad7
+- **Build Command**: npm run build
+- **Publish Directory**: dist
 
 ## Data Sources
 
@@ -150,3 +157,28 @@ npm run build        # Build for production
 npm run preview      # Preview production build
 npm run seed         # Seed Firestore with initial data
 ```
+
+## Development Roadmap
+
+### 🔄 In Progress
+- **Production Firestore Rules**: Update from test mode to production-ready rules
+
+### 📋 Core Features (Priority 1)
+- **Firestore Data Model**: Design and implement complete data model for users, weeks, games, and picks
+- **Hidden Picks Logic**: Implement reveal logic - show picks only when both submitted AND game started
+- **Live Scores Integration**: Integrate live NFL scores API (start with mock, then real API)
+- **Standings Calculation**: Build weekly and season standings logic between Brady and Jenny
+
+### 🎨 UI/UX Improvements (Priority 2)
+- **Mobile Responsive**: Ensure mobile-first design is fully responsive
+- **Current Week Scroll**: Auto-scroll to current week when opening the app
+- **Game Highlights**: Highlight correct picks when games are final
+- **Light/Dark Themes**: Implement theme toggle
+
+### 🏈 Advanced Features (Priority 3)
+- **Fantasy Integration**: Add Yahoo Fantasy Football dashboard card showing matchup
+- **NCAAF Support**: Add college football league support
+- **Multi-User Support**: Expand beyond Brady and Jenny (future)
+
+### 🎯 Current Focus
+Working on core pick submission and reveal logic with proper Firestore integration.

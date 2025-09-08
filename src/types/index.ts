@@ -32,6 +32,10 @@ export interface Game {
   status?: 'scheduled' | 'live' | 'final';
   homeScore?: number;
   awayScore?: number;
+  quarter?: number;
+  timeRemaining?: string;
+  possession?: string;
+  network?: string;
 }
 
 export interface Pick {
@@ -68,6 +72,8 @@ export interface GameScore {
   status: 'scheduled' | 'live' | 'final';
   quarter?: number;
   timeRemaining?: string;
+  possession?: string;
+  network?: string;
 }
 
 export interface FantasyTeam {

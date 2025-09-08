@@ -1,31 +1,25 @@
-// src/pages/CurrentWeek.tsx
+// src/pages/NFL/Scoreboard.tsx
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, getDocs, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { Header } from '@/components/Header';
+import { NFLNavigation } from '@/components/NFLNavigation';
 import { GameCard } from '@/components/GameCard';
-import { Standings } from '@/components/Standings';
 import { WeekSelector } from '@/components/WeekSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Trophy, Users } from 'lucide-react';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
-import { DataSyncService } from '@/services/DataSyncService';
-import dayjs from '@/lib/dayjs';
 
-export const CurrentWeek = () => {
+export const NFLScoreboard = () => {
   const { user } = useAuth();
   const [currentWeek, setCurrentWeek] = useState<Week | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
-  const [hasScrolledToCurrentWeek, setHasScrolledToCurrentWeek] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
-  const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1); // Weeks 1-22 (18 regular + 4 playoff)
+  const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
   const oddsProvider = ProviderFactory.createOddsProvider();
@@ -73,9 +67,12 @@ export const CurrentWeek = () => {
 
         // Merge schedule, odds, and scores data
         const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });
+        // Data successfully loaded from APIs
+        
         const gamesData = schedule.map(game => {
           const gameOdds = odds.find(odd => odd.gameId === game.gameId);
           const gameScore = scores.find(score => score.gameId === game.gameId);
+          // Merge game data with odds and scores, preserving the original status
           return {
             ...game,
             ...gameOdds,
@@ -165,15 +162,6 @@ export const CurrentWeek = () => {
     return bothPicked && gameStarted;
   };
 
-  const getOpponentId = () => {
-    // For now, return Jenny's UID - in a real app, this would be dynamic
-    return 'SAMXEs1HopNiPK62qpZnP29SITz2';
-  };
-
-  const getOpponentName = () => {
-    return 'Jenny';
-  };
-
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -183,7 +171,7 @@ export const CurrentWeek = () => {
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-muted-foreground mb-4">
-              You need to be signed in to view picks and standings.
+              You need to be signed in to view picks and scores.
             </p>
           </CardContent>
         </Card>
@@ -194,6 +182,7 @@ export const CurrentWeek = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <NFLNavigation />
       <div className="container mx-auto px-4 py-4 space-y-4">
         {/* Week Selector */}
         <WeekSelector
@@ -350,16 +339,6 @@ export const CurrentWeek = () => {
             </Card>
           </div>
         )}
-
-        {/* Standings - Moved to bottom */}
-        <Standings 
-          games={games}
-          picks={picks}
-          currentUserId={user?.uid || ''}
-          opponentUserId={getOpponentId() || ''}
-          currentUserName={user?.displayName || 'Brady'}
-          opponentUserName={getOpponentName()}
-        />
       </div>
     </div>
   );

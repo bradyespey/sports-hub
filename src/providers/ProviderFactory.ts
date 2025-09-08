@@ -6,16 +6,19 @@ import { MockLogosProvider } from './mock/MockLogosProvider';
 import { HttpOddsProvider } from './http/HttpOddsProvider';
 import { HttpScoresProvider } from './http/HttpScoresProvider';
 import { HttpLogosProvider } from './http/HttpLogosProvider';
+import { TheOddsApiProvider } from './http/TheOddsApiProvider';
+import { EspnScoresProvider } from './http/EspnScoresProvider';
 
 export class ProviderFactory {
   private static useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
   static createOddsProvider(): OddsProvider {
-    return this.useMock ? new MockOddsProvider() : new HttpOddsProvider();
+    // Use mock odds provider for now due to API key issues
+    return new MockOddsProvider();
   }
 
   static createScoresProvider(): ScoresProvider {
-    return this.useMock ? new MockScoresProvider() : new HttpScoresProvider();
+    return this.useMock ? new MockScoresProvider() : new EspnScoresProvider();
   }
 
   static createLogosProvider(): LogosProvider {
