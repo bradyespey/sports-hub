@@ -32,22 +32,9 @@ export const NFLScoreboard = () => {
   const isCurrentNFLWeek = (week: number): boolean => {
     if (!currentWeek) return false;
     
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    
-    // NFL week runs Tuesday (2) to Monday (1)
-    // If it's Tuesday-Sunday, we're in the current week
-    // If it's Monday, we're still in the previous week until games start
-    if (dayOfWeek >= 2) { // Tuesday-Sunday
-      return week === currentWeek.week;
-    } else if (dayOfWeek === 1) { // Monday
-      // On Monday, we're still in the current week until late afternoon
-      // For simplicity, consider Monday as current week
-      return week === currentWeek.week;
-    } else { // Sunday
-      // On Sunday, we're in the current week
-      return week === currentWeek.week;
-    }
+    // For now, just check if it's the current week from our data
+    // In production, this would be more sophisticated
+    return week === currentWeek.week;
   };
 
 
