@@ -15,6 +15,7 @@ import { Trophy, Users } from 'lucide-react';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { DataSyncService } from '@/services/DataSyncService';
+import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 import dayjs from '@/lib/dayjs';
 
 export const CurrentWeek = () => {
@@ -28,7 +29,6 @@ export const CurrentWeek = () => {
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1); // Weeks 1-22 (18 regular + 4 playoff)
 
   const scoresProvider = ProviderFactory.createScoresProvider();
-  const oddsProvider = ProviderFactory.createOddsProvider();
 
   // Get current week
   useEffect(() => {
@@ -68,49 +68,16 @@ export const CurrentWeek = () => {
         // Fetch schedule
         const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
         
-        // Start with mock odds data
-        const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
-        const mockProvider = new MockOddsProvider();
-        let odds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+        // Get cached odds and scores
+        const [oddsMap, scores] = await Promise.all([
+          getCachedOddsForGames(schedule),
+          scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) })
+        ]);
         
-        // Check if we have odds for all games, if not, try to get missing ones
-        const gamesWithoutOdds = schedule.filter(game => 
-          !odds.some(odd => odd.gameId === game.gameId)
-        );
-        
-        if (gamesWithoutOdds.length > 0) {
-          console.log(`🔍 Found ${gamesWithoutOdds.length} games without odds, attempting to fetch...`);
-          
-          // Try to get real odds for missing games (only for current/future weeks)
-          if (selectedWeek >= 1) {
-            try {
-              const realOdds = await oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek });
-              const matchingRealOdds = realOdds.filter(odd => 
-                gamesWithoutOdds.some(game => game.gameId === odd.gameId)
-              );
-              
-              if (matchingRealOdds.length > 0) {
-                console.log(`✅ Found ${matchingRealOdds.length} real odds for missing games`);
-                odds = [...odds, ...matchingRealOdds];
-              }
-            } catch (error) {
-              console.log('⚠️ Could not fetch real odds for missing games, using mock data');
-            }
-          }
-        }
-
         // Merge schedule, odds, and scores data
-        const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });
-        const gamesData = schedule.map(game => {
-          const gameOdds = odds.find(odd => odd.gameId === game.gameId);
-          const gameScore = scores.find(score => score.gameId === game.gameId);
-          return {
-            ...game,
-            ...gameOdds,
-            ...gameScore,
-            status: gameScore?.status || game.status // Use score status if available, otherwise use schedule status
-          };
-        });
+        const gamesData = schedule.map(game => 
+          mergeGameWithOddsAndScores(game, oddsMap, scores)
+        );
 
         setGames(gamesData);
 

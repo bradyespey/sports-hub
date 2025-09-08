@@ -17,7 +17,7 @@ A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly ou
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend**: Firebase Auth + Firestore
 - **Deployment**: Netlify
-- **Data**: Provider pattern for Mock/HTTP data sources
+- **Data**: Real-time data from external APIs
 
 ## Local Development
 
@@ -56,18 +56,16 @@ A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly ou
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase sender ID | `123456789` |
 | `VITE_FIREBASE_APP_ID` | Yes | Firebase app ID | `1:123:web:abc` |
 | `VITE_ALLOWED_EMAILS` | Yes | Comma-separated allowed emails | `user1@gmail.com,user2@gmail.com` |
-| `VITE_USE_MOCK` | No | Use mock data (true/false) | `true` |
-| `VITE_ODDS_API_URL` | No* | Odds API endpoint | `https://api.provider.com/v1` |
-| `VITE_ODDS_API_KEY` | No* | Odds API key | `your_api_key` |
-| `VITE_SCORES_API_URL` | No* | Scores API endpoint | `https://api.provider.com/v1` |
-| `VITE_SCORES_API_KEY` | No* | Scores API key | `your_api_key` |
+| `VITE_ODDS_API_URL` | No | Odds API endpoint | `https://api.provider.com/v1` |
+| `VITE_ODDS_API_KEY` | Yes | Odds API key | `your_api_key` |
+| `VITE_SCORES_API_URL` | No | Scores API endpoint | `https://api.provider.com/v1` |
+| `VITE_SCORES_API_KEY` | No | Scores API key | `your_api_key` |
 | `VITE_LOGO_CDN_BASE` | No | Team logos CDN | `https://cdn.com/logos` |
 | `VITE_FANTASY_PROVIDER` | No | Fantasy provider (sleeper/yahoo) | `sleeper` |
 | `VITE_FANTASY_LEAGUE_ID` | No** | Fantasy league ID | `123456789` |
 | `VITE_FANTASY_TEAM_ID_BRADY` | No** | Brady's team ID | `1` |
 | `VITE_FANTASY_TEAM_ID_JENNY` | No** | Jenny's team ID | `2` |
 
-*Required when `VITE_USE_MOCK=false`  
 **Required when fantasy provider is enabled
 
 ## Deployment (Netlify)
@@ -88,17 +86,12 @@ A modern, mobile-first NFL picks app for Brady and Jenny to compete in weekly ou
 
 ## Data Sources
 
-### Mock Mode (Development)
-Set `VITE_USE_MOCK=true` to use local JSON data from `src/devdata/`:
-- No API keys required
-- Perfect for development and testing
-- Includes sample games, odds, and scores
-
-### HTTP Mode (Production)
-Set `VITE_USE_MOCK=false` and provide API credentials:
+### Real-Time Data Only
+The app now uses only real-time data from external APIs:
 - Requires valid API keys for odds and scores
 - Real-time data from external providers
 - Configure CDN for team logos
+- If data is unavailable, fields will be blank rather than showing placeholder data
 
 ## Database Setup
 
@@ -130,14 +123,13 @@ Requires server-side OAuth implementation via Netlify Functions.
 ```
 src/
 ├── components/          # Reusable UI components
-├── devdata/            # Mock JSON data for development
+├── docs/               # Project documentation
 ├── hooks/              # Custom React hooks
 ├── lib/                # Utilities and Firebase config
 ├── pages/              # Route components
 ├── providers/          # Data provider implementations
 │   ├── interfaces.ts   # Provider contracts
-│   ├── mock/          # Mock implementations
-│   ├── http/          # HTTP implementations
+│   ├── http/          # HTTP API implementations
 │   └── fantasy/       # Fantasy providers
 └── types/             # TypeScript type definitions
 ```
@@ -166,7 +158,7 @@ npm run seed         # Seed Firestore with initial data
 ### 📋 Core Features (Priority 1)
 - **Firestore Data Model**: Design and implement complete data model for users, weeks, games, and picks
 - **Hidden Picks Logic**: Implement reveal logic - show picks only when both submitted AND game started
-- **Live Scores Integration**: Integrate live NFL scores API (start with mock, then real API)
+- **Live Scores Integration**: Integrate live NFL scores API
 - **Standings Calculation**: Build weekly and season standings logic between Brady and Jenny
 
 ### 🎨 UI/UX Improvements (Priority 2)

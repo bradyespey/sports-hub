@@ -10,6 +10,7 @@ import { WeekSelector } from '@/components/WeekSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
+import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 
 export const NFLStandings = () => {
   const { user } = useAuth();
@@ -20,7 +21,6 @@ export const NFLStandings = () => {
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
-  const oddsProvider = ProviderFactory.createOddsProvider();
 
   // Get current week
   useEffect(() => {
@@ -60,28 +60,16 @@ export const NFLStandings = () => {
         // Fetch schedule and odds for selected week
         const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
         
-        let odds = await oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+        // Get cached odds and scores
+        const [oddsMap, scores] = await Promise.all([
+          getCachedOddsForGames(schedule),
+          scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) })
+        ]);
         
-        // If no odds returned (API failed), fallback to mock data
-        if (odds.length === 0) {
-          console.warn('Primary odds provider returned no data, trying fallback');
-          const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
-          const mockProvider = new MockOddsProvider();
-          odds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
-        }
-
         // Merge schedule, odds, and scores data
-        const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });
-        const gamesData = schedule.map(game => {
-          const gameOdds = odds.find(odd => odd.gameId === game.gameId);
-          const gameScore = scores.find(score => score.gameId === game.gameId);
-          return {
-            ...game,
-            ...gameOdds,
-            ...gameScore,
-            status: gameScore?.status || game.status // Use score status if available, otherwise use schedule status
-          };
-        });
+        const gamesData = schedule.map(game => 
+          mergeGameWithOddsAndScores(game, oddsMap, scores)
+        );
 
         setGames(gamesData);
 

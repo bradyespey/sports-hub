@@ -1,370 +1,224 @@
-import { Handler } from '@netlify/functions';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import type { Handler } from "@netlify/functions";
+import fetch from "node-fetch";
+import * as admin from "firebase-admin";
 
-// Initialize Firebase Admin (only once)
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+let app: admin.app.App | null = null;
+function getDb() {
+  if (!app) {
+    app = admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+  return admin.firestore();
 }
 
-const db = getFirestore();
-
-interface GameDoc {
-  season: number;
-  week: number;
-  gameId: string;
-  kickoffUtc: Date;
-  homeTeam: string;
-  awayTeam: string;
-  status: 'scheduled' | 'live' | 'final';
-}
-
-interface OddsDoc {
-  gameId: string;
-  market: 'h2h';
-  provider: 'oddsapi';
-  data: any;
-  fetchedAt: Date;
-  locked: boolean;
-}
-
-interface WeekDoc {
-  season: number;
-  week: number;
-  hasAnyOdds: boolean;
-  lastOddsFetchAt?: Date;
-}
-
-interface OddsRefreshRequest {
+type Body = {
   season?: number;
   week?: number;
-  mode: 'manual' | 'daily' | 'bootstrap';
-}
+  mode?: "manual" | "daily" | "bootstrap";
+};
 
-class OddsRefreshService {
-  private apiKey: string;
-  private baseUrl: string;
+export const handler: Handler = async (event) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
+  };
 
-  constructor() {
-    this.apiKey = process.env.ODDS_API_KEY || '';
-    this.baseUrl = 'https://api.the-odds-api.com/v4';
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers };
   }
 
-  getCurrentNFLWeek(): { season: number; week: number } {
-    // Simple calculation - in production this would be more sophisticated
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    
-    // NFL season starts first Thursday of September
-    // For now, use a simple week calculation
-    const seasonStart = new Date(currentYear, 8, 7); // Sept 7th approx
-    const weeksPassed = Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
-    
-    return {
-      season: currentYear,
-      week: Math.max(1, Math.min(22, weeksPassed + 1))
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed", headers };
+  }
+
+  const db = getDb();
+
+  let body: Body = {};
+  try { body = event.body ? JSON.parse(event.body) : {}; } catch {}
+
+  // Resolve target week. If not provided, use the latest doc in `weeks` marked as current.
+  const season = body.season || 2025;
+  const week = body.week || 1;
+
+  console.log(`Refreshing odds for season ${season}, week ${week}`);
+
+  // Load games for target week
+  const gamesSnap = await db.collection("games")
+    .where("season", "==", season)
+    .where("week", "==", week)
+    .get();
+
+  const games = gamesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+  console.log(`Found ${games.length} games for week ${week}`);
+
+  // Partition games by time and odds presence
+  const nowIso = new Date().toISOString();
+  const toUpdate: any[] = [];
+  const toFillOnce: any[] = [];
+
+  // Preload current odds docs to avoid extra reads
+  const oddsDocs = await Promise.all(games.map(g => db.collection("odds").doc(g.gameId).get()));
+  const oddsByGameId = new Map(oddsDocs.map(doc => [doc.id, doc.exists ? doc.data() : null]));
+
+  for (const g of games) {
+    const kickoffUtc = g.kickoffUtc;
+    const isPast = kickoffUtc && kickoffUtc < nowIso;
+    const existing = oddsByGameId.get(g.gameId);
+
+    if (isPast) {
+      if (!existing) {
+        // Past game missing odds: allow a one-time fill
+        toFillOnce.push(g);
+      }
+      // If past and existing odds exist, do nothing
+    } else {
+      // Future game: eligible to update on demand
+      toUpdate.push(g);
+    }
+  }
+
+  console.log(`To update: ${toUpdate.length}, To fill once: ${toFillOnce.length}`);
+
+  // If nothing to do, return early
+  if (toUpdate.length === 0 && toFillOnce.length === 0) {
+    return { 
+      statusCode: 200, 
+      body: JSON.stringify({ updated: 0, filledPast: 0, note: "No eligible games" }),
+      headers: { "content-type": "application/json", "Access-Control-Allow-Origin": "*" }
     };
   }
 
-  async getGamesForWeek(season: number, week: number): Promise<GameDoc[]> {
-    const gamesRef = db.collection('games');
-    const snapshot = await gamesRef
-      .where('season', '==', season)
-      .where('week', '==', week)
-      .get();
+  // Fetch league-wide odds once (markets=h2h&regions=us)
+  const url = new URL(process.env.ODDS_API_URL as string);
+  url.searchParams.set("apiKey", process.env.ODDS_API_KEY as string);
+  url.searchParams.set("markets", "h2h");
+  url.searchParams.set("regions", "us");
 
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      kickoffUtc: doc.data().kickoffUtc.toDate()
-    })) as GameDoc[];
+  console.log(`Fetching odds from: ${url.toString().replace(process.env.ODDS_API_KEY as string, 'XXX')}`);
+
+  const resp = await fetch(url.toString());
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.error(`Odds API error: ${resp.status} ${text}`);
+    return { 
+      statusCode: 502, 
+      body: `Odds API error: ${resp.status} ${text}`,
+      headers: { "content-type": "application/json", "Access-Control-Allow-Origin": "*" }
+    };
+  }
+  const providerPayload = await resp.json() as any[];
+  console.log(`Received ${providerPayload.length} events from odds API`);
+
+  // Index provider data by event id and by team tuple for loose matching
+  const byEventId = new Map<string, any>();
+  for (const evt of providerPayload) {
+    byEventId.set(evt.id, evt);
   }
 
-  async getExistingOdds(gameIds: string[]): Promise<Map<string, OddsDoc>> {
-    const oddsMap = new Map<string, OddsDoc>();
+  // Helper to find provider game for our game record
+  function resolveProviderGame(g: any) {
+    if (g.oddsEventId && byEventId.has(g.oddsEventId)) {
+      console.log(`Found exact match for ${g.gameId} via oddsEventId`);
+      return byEventId.get(g.oddsEventId);
+    }
     
-    for (const gameId of gameIds) {
-      const oddsDoc = await db.collection('odds').doc(gameId).get();
-      if (oddsDoc.exists) {
-        const data = oddsDoc.data()!;
-        oddsMap.set(gameId, {
-          ...data,
-          fetchedAt: data.fetchedAt.toDate()
-        } as OddsDoc);
+    // Fallback: match by team names in payload (simple contains check)
+    for (const evt of providerPayload) {
+      const th = evt.home_team?.toLowerCase?.() || "";
+      const ta = evt.away_team?.toLowerCase?.() || "";
+      const gh = String(g.homeTeam || "").toLowerCase();
+      const ga = String(g.awayTeam || "").toLowerCase();
+      
+      if ((th.includes(gh) && ta.includes(ga)) || (th.includes(ga) && ta.includes(gh))) {
+        console.log(`Found team name match for ${g.gameId}: ${g.homeTeam} vs ${g.awayTeam}`);
+        return evt;
       }
     }
     
-    return oddsMap;
-  }
-
-  async getWeekDoc(season: number, week: number): Promise<WeekDoc | null> {
-    const weekRef = db.collection('weeks').doc(`${season}_W${week.toString().padStart(2, '0')}`);
-    const weekDoc = await weekRef.get();
-    
-    if (weekDoc.exists) {
-      const data = weekDoc.data()!;
-      return {
-        ...data,
-        lastOddsFetchAt: data.lastOddsFetchAt?.toDate()
-      } as WeekDoc;
-    }
-    
+    console.log(`No match found for ${g.gameId}: ${g.homeTeam} vs ${g.awayTeam}`);
     return null;
   }
 
-  partitionGames(games: GameDoc[], existingOdds: Map<string, OddsDoc>, now: Date) {
-    const missingLocked: GameDoc[] = [];
-    const eligible: GameDoc[] = [];
-    const alreadyLocked: GameDoc[] = [];
-    const notEligible: GameDoc[] = [];
+  let updated = 0, filledPast = 0;
 
-    for (const game of games) {
-      const hasOdds = existingOdds.has(game.gameId);
-      const isLocked = game.kickoffUtc < now;
-      
-      if (isLocked && !hasOdds) {
-        missingLocked.push(game);
-      } else if (isLocked && hasOdds) {
-        alreadyLocked.push(game);
-      } else if (!isLocked) {
-        eligible.push(game);
-      } else {
-        notEligible.push(game);
-      }
-    }
+  const batch = db.batch();
 
-    return { missingLocked, eligible, alreadyLocked, notEligible };
+  // Upsert odds for eligible future games
+  for (const g of toUpdate) {
+    const evt = resolveProviderGame(g);
+    if (!evt) continue;
+    const ref = db.collection("odds").doc(g.gameId);
+    batch.set(ref, {
+      gameId: g.gameId,
+      provider: "oddsapi",
+      market: "h2h",
+      data: evt,
+      fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+      locked: false,
+    }, { merge: true });
+    updated++;
   }
 
-  async fetchOddsFromProvider(): Promise<{ data: any[], cost: number }> {
-    const response = await fetch(
-      `${this.baseUrl}/sports/americanfootball_nfl/odds?apiKey=${this.apiKey}&regions=us&markets=h2h&oddsFormat=american&dateFormat=iso`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Odds API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const cost = parseInt(response.headers.get('x-requests-last') || '1');
-    
-    // Update usage tracking
-    const used = parseInt(response.headers.get('x-requests-used') || '0');
-    const remaining = parseInt(response.headers.get('x-requests-remaining') || '0');
-    
-    await this.updateUsage(used, remaining, cost);
-
-    return { data, cost };
+  // One-time fill for past games missing odds
+  for (const g of toFillOnce) {
+    const evt = resolveProviderGame(g);
+    if (!evt) continue;
+    const ref = db.collection("odds").doc(g.gameId);
+    batch.set(ref, {
+      gameId: g.gameId,
+      provider: "oddsapi",
+      market: "h2h",
+      data: evt,
+      fetchedAt: admin.firestore.FieldValue.serverTimestamp(),
+      locked: true, // past game: lock immediately
+    }, { merge: true });
+    filledPast++;
   }
 
-  async updateUsage(used: number, remaining: number, lastCost: number): Promise<void> {
-    await db.collection('system').doc('usage').set({
-      used,
-      remaining,
-      lastCost,
-      lastRequestAt: Timestamp.now()
-    });
-  }
+  // Mark the week as having odds and set last fetch time
+  const weekId = `${season}_${String(week).padStart(2, "0")}`;
+  const weekRef = db.collection("weeks").doc(weekId);
+  batch.set(weekRef, {
+    season, 
+    week, 
+    hasAnyOdds: updated + filledPast > 0,
+    lastOddsFetchAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
 
-  async saveOdds(games: GameDoc[], providerData: any[], isLocked: boolean): Promise<number> {
-    let savedCount = 0;
-    const batch = db.batch();
+  await batch.commit();
+  console.log(`Batch committed: ${updated} updated, ${filledPast} filled past`);
 
-    for (const game of games) {
-      // Find matching odds in provider data
-      const matchingOdds = providerData.find(odds => 
-        this.normalizeTeamName(odds.home_team) === game.homeTeam &&
-        this.normalizeTeamName(odds.away_team) === game.awayTeam
-      );
-
-      if (matchingOdds) {
-        const oddsRef = db.collection('odds').doc(game.gameId);
-        batch.set(oddsRef, {
-          gameId: game.gameId,
-          market: 'h2h',
-          provider: 'oddsapi',
-          data: matchingOdds,
-          fetchedAt: Timestamp.now(),
-          locked: isLocked
-        });
-        savedCount++;
-      }
-    }
-
-    await batch.commit();
-    return savedCount;
-  }
-
-  async updateWeekDoc(season: number, week: number): Promise<void> {
-    const weekRef = db.collection('weeks').doc(`${season}_W${week.toString().padStart(2, '0')}`);
-    await weekRef.set({
-      season,
-      week,
-      hasAnyOdds: true,
-      lastOddsFetchAt: Timestamp.now()
+  // Credits headers for usage monitor (optional)
+  const remaining = resp.headers.get("x-requests-remaining") || null;
+  const lastReq = resp.headers.get("x-requests-last") || null;
+  if (remaining || lastReq) {
+    await db.collection("system").doc("api_usage").set({
+      remaining, 
+      lastRequestAt: admin.firestore.FieldValue.serverTimestamp(), 
+      lastCost: "1 credit (h2h,us)"
     }, { merge: true });
   }
 
-  private normalizeTeamName(teamName: string): string {
-    const teamMap: Record<string, string> = {
-      'Arizona Cardinals': 'ARI',
-      'Atlanta Falcons': 'ATL',
-      'Baltimore Ravens': 'BAL',
-      'Buffalo Bills': 'BUF',
-      'Carolina Panthers': 'CAR',
-      'Chicago Bears': 'CHI',
-      'Cincinnati Bengals': 'CIN',
-      'Cleveland Browns': 'CLE',
-      'Dallas Cowboys': 'DAL',
-      'Denver Broncos': 'DEN',
-      'Detroit Lions': 'DET',
-      'Green Bay Packers': 'GB',
-      'Houston Texans': 'HOU',
-      'Indianapolis Colts': 'IND',
-      'Jacksonville Jaguars': 'JAX',
-      'Kansas City Chiefs': 'KC',
-      'Las Vegas Raiders': 'LV',
-      'Los Angeles Chargers': 'LAC',
-      'Los Angeles Rams': 'LAR',
-      'Miami Dolphins': 'MIA',
-      'Minnesota Vikings': 'MIN',
-      'New England Patriots': 'NE',
-      'New Orleans Saints': 'NO',
-      'New York Giants': 'NYG',
-      'New York Jets': 'NYJ',
-      'Philadelphia Eagles': 'PHI',
-      'Pittsburgh Steelers': 'PIT',
-      'San Francisco 49ers': 'SF',
-      'Seattle Seahawks': 'SEA',
-      'Tampa Bay Buccaneers': 'TB',
-      'Tennessee Titans': 'TEN',
-      'Washington Commanders': 'WAS'
-    };
-
-    return teamMap[teamName] || teamName;
-  }
-}
-
-export const handler: Handler = async (event, context) => {
-  try {
-    if (event.httpMethod !== 'POST') {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: 'Method not allowed' })
-      };
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ 
+      updated, 
+      filledPast, 
+      remaining,
+      totalGames: games.length,
+      apiEvents: providerPayload.length
+    }),
+    headers: { 
+      "content-type": "application/json",
+      "Access-Control-Allow-Origin": "*"
     }
-
-    const request: OddsRefreshRequest = JSON.parse(event.body || '{}');
-    const service = new OddsRefreshService();
-    const now = new Date();
-
-    // Resolve target week
-    const currentWeek = service.getCurrentNFLWeek();
-    const targetSeason = request.season || currentWeek.season;
-    const targetWeek = request.week || currentWeek.week;
-
-    console.log(`Odds refresh: mode=${request.mode}, target=${targetSeason}_W${targetWeek}`);
-
-    // Check if we should skip (bootstrap mode only)
-    if (request.mode === 'bootstrap') {
-      const weekDoc = await service.getWeekDoc(targetSeason, targetWeek);
-      if (weekDoc?.hasAnyOdds) {
-        return {
-          statusCode: 200,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            success: true,
-            week: targetWeek,
-            season: targetSeason,
-            fetched: { missingLocked: 0, eligible: 0 },
-            skipped: { alreadyLocked: 0, notEligible: 0 },
-            usage: { remaining: 0, cost: 0 },
-            message: 'Week already has odds, skipping bootstrap'
-          })
-        };
-      }
-    }
-
-    // Get games for the week
-    const games = await service.getGamesForWeek(targetSeason, targetWeek);
-    const gameIds = games.map(g => g.gameId);
-    const existingOdds = await service.getExistingOdds(gameIds);
-
-    // Partition games
-    const partitioned = service.partitionGames(games, existingOdds, now);
-
-    // Determine what to fetch
-    let gamesToFetch: GameDoc[] = [];
-    
-    // Always fetch missing locked games (fill once then lock)
-    gamesToFetch.push(...partitioned.missingLocked);
-    
-    // Fetch eligible games for manual/daily/bootstrap modes
-    if (['manual', 'daily', 'bootstrap'].includes(request.mode)) {
-      gamesToFetch.push(...partitioned.eligible);
-    }
-
-    let totalCost = 0;
-    let fetchedCounts = { missingLocked: 0, eligible: 0 };
-
-    if (gamesToFetch.length > 0) {
-      // Fetch from provider
-      const { data, cost } = await service.fetchOddsFromProvider();
-      totalCost = cost;
-
-      // Save missing locked games (and lock them)
-      if (partitioned.missingLocked.length > 0) {
-        fetchedCounts.missingLocked = await service.saveOdds(partitioned.missingLocked, data, true);
-      }
-
-      // Save eligible games (don't lock them yet)
-      if (partitioned.eligible.length > 0 && ['manual', 'daily', 'bootstrap'].includes(request.mode)) {
-        fetchedCounts.eligible = await service.saveOdds(partitioned.eligible, data, false);
-      }
-
-      // Update week doc
-      await service.updateWeekDoc(targetSeason, targetWeek);
-    }
-
-    // Get current usage for response
-    const usageDoc = await db.collection('system').doc('usage').get();
-    const usage = usageDoc.exists ? usageDoc.data() : { remaining: 500 };
-
-    const response = {
-      success: true,
-      week: targetWeek,
-      season: targetSeason,
-      fetched: fetchedCounts,
-      skipped: {
-        alreadyLocked: partitioned.alreadyLocked.length,
-        notEligible: partitioned.notEligible.length
-      },
-      usage: {
-        remaining: usage?.remaining || 500,
-        cost: totalCost
-      }
-    };
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(response)
-    };
-
-  } catch (error) {
-    console.error('Odds refresh error:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
-    };
-  }
+  };
 };
+
+export default handler;

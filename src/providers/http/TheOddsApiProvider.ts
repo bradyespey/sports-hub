@@ -10,7 +10,7 @@ export class TheOddsApiProvider implements OddsProvider {
 
   async getWeekOdds({ season, week }: { season: number; week: number }): Promise<GameOdds[]> {
     if (!this.apiKey) {
-      console.warn('The Odds API key not configured, falling back to mock data');
+      throw new Error('The Odds API key not configured');
       return [];
     }
 
@@ -99,8 +99,8 @@ export class TheOddsApiProvider implements OddsProvider {
 
     } catch (error) {
       console.error('Error fetching odds from The Odds API:', error);
-      console.warn('Falling back to mock odds data due to API error');
-      // Return empty array to allow mock provider fallback
+      console.warn('API error occurred, returning empty odds data');
+      // Return empty array - no fallback to mock data
       return [];
     }
   }

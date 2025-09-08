@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { OddsRefreshButton } from '@/components/OddsRefreshButton';
-import { OddsService } from '@/services/OddsService';
+import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 
 export const NFLScoreboard = () => {
   const { user } = useAuth();
@@ -20,13 +20,10 @@ export const NFLScoreboard = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
-  const [canRefreshOdds, setCanRefreshOdds] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
-  const oddsProvider = ProviderFactory.createOddsProvider();
-  const oddsService = new OddsService();
 
   // Check if a week is the current NFL week (Tuesday-Monday)
   const isCurrentNFLWeek = (week: number): boolean => {
@@ -73,60 +70,19 @@ export const NFLScoreboard = () => {
 
     const fetchData = async () => {
       try {
-        // Check if week has any odds stored
-        const weekDoc = await oddsService.getWeekDoc(2025, selectedWeek);
-        
-        // If no odds stored, bootstrap them
-        if (!weekDoc?.hasAnyOdds) {
-          try {
-            await oddsService.refreshOdds({
-              season: 2025,
-              week: selectedWeek,
-              mode: 'bootstrap'
-            });
-          } catch (error) {
-            console.warn('Bootstrap failed (Netlify functions not running locally), using mock data:', error);
-            // In local dev, just continue with mock data
-          }
-        }
-
         // Fetch schedule
         const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
         
-        // Get odds from Firestore
-        const oddsMap = await oddsService.getOddsForWeek(2025, selectedWeek);
+        // Get cached odds and scores
+        const [oddsMap, scores] = await Promise.all([
+          getCachedOddsForGames(schedule),
+          scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) })
+        ]);
         
-        // Load mock odds as fallback
-        const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
-        const mockProvider = new MockOddsProvider();
-        const mockOdds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
-
         // Merge schedule, odds, and scores data
-        const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });
-        
-        const gamesData = schedule.map(game => {
-          // Try to get real odds first, fallback to mock
-          const realOdds = oddsMap.get(game.gameId);
-          const mockOddsForGame = mockOdds.find(odd => odd.gameId === game.gameId);
-          const gameOdds = realOdds ? oddsService.transformOddsToGameData(realOdds) : mockOddsForGame;
-          
-          const gameScore = scores.find(score => score.gameId === game.gameId);
-          
-          return {
-            ...game,
-            spreadHome: gameOdds?.spreadHome || game.spreadHome || 0,
-            spreadAway: gameOdds?.spreadAway || game.spreadAway || 0,
-            total: gameOdds?.total || game.total || 0,
-            sportsbook: gameOdds ? {
-              spreadHome: gameOdds.spreadHome,
-              spreadAway: gameOdds.spreadAway,
-              total: gameOdds.total,
-              provider: gameOdds.provider || 'Mock Odds Provider'
-            } : game.sportsbook,
-            ...gameScore,
-            status: gameScore?.status || game.status
-          };
-        });
+        const gamesData = schedule.map(game => 
+          mergeGameWithOddsAndScores(game, oddsMap, scores)
+        );
 
         setGames(gamesData);
 
@@ -142,14 +98,6 @@ export const NFLScoreboard = () => {
         });
         
         setPicks(picksData);
-        
-        // Determine if refresh button should be enabled
-        // Allow refreshing for both scheduled and live games (not just scheduled)
-        const unstartedGamesCount = gamesData.filter(game => 
-          game.status === 'scheduled' || game.status === 'live'
-        ).length;
-        const hasUnstartedGames = unstartedGamesCount > 0;
-        setCanRefreshOdds(hasUnstartedGames);
         
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -251,16 +199,6 @@ export const NFLScoreboard = () => {
             <OddsRefreshButton
               season={2025}
               week={selectedWeek}
-              isCurrentWeek={isCurrentNFLWeek(selectedWeek)}
-              hasUnstartedGames={canRefreshOdds}
-              onRefreshComplete={(response) => {
-                console.log('Odds refresh completed:', response);
-                // Refresh the games data to show updated odds
-                if (response.success) {
-                  // Reload the page to get fresh data
-                  window.location.reload();
-                }
-              }}
             />
           </div>
         </div>

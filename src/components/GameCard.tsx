@@ -228,7 +228,6 @@ export const GameCard = ({
              <span>
                {getTeamName(game.homeTeam)} {game.spreadHome > 0 ? '+' : ''}{game.spreadHome} O/U {game.total}
                {game.network && ` TV: ${game.network}`}
-               {game.sportsbook?.provider === 'Mock Odds Provider' && ' (MOCK)'}
              </span>
            ) : game.network ? (
              <span>TV: {game.network}</span>

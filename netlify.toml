@@ -4,10 +4,11 @@
   functions = "netlify/functions"
 
 [dev]
-  targetPort = 8082
+  targetPort = 8080
 
 [functions]
   node_bundler = "esbuild"
+  directory = "netlify/functions"
 
 [[redirects]]
   from = "/*"

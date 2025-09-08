@@ -25,11 +25,6 @@ export const Header = () => {
             <h1 className="text-xl font-bold">Espey Pick'em</h1>
             <div className="flex items-center space-x-2">
               <p className="text-xs text-muted-foreground">NFL 2025</p>
-              {import.meta.env.VITE_USE_MOCK === 'true' && (
-                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-semibold">
-                  MOCK DATA
-                </span>
-              )}
             </div>
           </div>
         </div>
