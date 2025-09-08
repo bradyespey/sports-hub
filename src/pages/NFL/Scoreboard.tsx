@@ -256,7 +256,10 @@ export const NFLScoreboard = () => {
               onRefreshComplete={(response) => {
                 console.log('Odds refresh completed:', response);
                 // Refresh the games data to show updated odds
-                fetchData();
+                if (response.success) {
+                  // Reload the page to get fresh data
+                  window.location.reload();
+                }
               }}
             />
           </div>

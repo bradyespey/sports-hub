@@ -40,7 +40,7 @@ export class EspnScoresProvider implements ScoresProvider {
           kickoffUtc: new Date(event.date),
           homeTeam: normalizedHome,
           awayTeam: normalizedAway,
-          status: this.mapGameStatus(competition.status.type.name),
+          status: this.mapGameStatus(competition.status.type.name, competition),
           network
         };
       }) || [];
@@ -96,7 +96,7 @@ export class EspnScoresProvider implements ScoresProvider {
           gameId,
           homeScore: parseInt(homeTeam.score) || 0,
           awayScore: parseInt(awayTeam.score) || 0,
-          status: this.mapGameStatus(competition.status.type.name),
+          status: this.mapGameStatus(competition.status.type.name, competition),
           quarter: competition.status.period || undefined,
           timeRemaining: competition.status.displayClock || undefined,
           possession: this.getPossession(competition),
@@ -138,7 +138,7 @@ export class EspnScoresProvider implements ScoresProvider {
     return undefined;
   }
 
-  private mapGameStatus(espnStatus: string): 'scheduled' | 'live' | 'final' {
+  private mapGameStatus(espnStatus: string, competition?: any): 'scheduled' | 'live' | 'final' {
     const statusMap: Record<string, 'scheduled' | 'live' | 'final'> = {
       'STATUS_SCHEDULED': 'scheduled',
       'STATUS_IN_PROGRESS': 'live',
@@ -148,6 +148,23 @@ export class EspnScoresProvider implements ScoresProvider {
       'STATUS_FINAL_OVERTIME': 'final'
     };
 
-    return statusMap[espnStatus] || 'scheduled';
+    let mappedStatus = statusMap[espnStatus] || 'scheduled';
+    
+    // Additional check: if ESPN says in progress but it's been more than 4 hours since start
+    // and we have a final score, mark as final
+    if (mappedStatus === 'live' && competition) {
+      const startTime = new Date(competition.date);
+      const now = new Date();
+      const hoursElapsed = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      
+      // If more than 4 hours have passed, likely the game is finished
+      if (hoursElapsed > 4) {
+        console.log(`Game likely finished (${hoursElapsed.toFixed(1)} hours elapsed), marking as final`);
+        mappedStatus = 'final';
+      }
+    }
+    
+    console.log(`ESPN Status: ${espnStatus} -> Mapped: ${mappedStatus}`);
+    return mappedStatus;
   }
 }
