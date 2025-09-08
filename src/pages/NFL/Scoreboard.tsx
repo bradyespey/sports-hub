@@ -144,7 +144,10 @@ export const NFLScoreboard = () => {
         setPicks(picksData);
         
         // Determine if refresh button should be enabled
-        const unstartedGamesCount = gamesData.filter(game => game.status === 'scheduled').length;
+        // Allow refreshing for both scheduled and live games (not just scheduled)
+        const unstartedGamesCount = gamesData.filter(game => 
+          game.status === 'scheduled' || game.status === 'live'
+        ).length;
         const hasUnstartedGames = unstartedGamesCount > 0;
         setCanRefreshOdds(hasUnstartedGames);
         

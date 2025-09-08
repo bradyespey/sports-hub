@@ -69,7 +69,7 @@ export const OddsRefreshButton: React.FC<OddsRefreshButtonProps> = ({
   const getButtonText = () => {
     if (isRefreshing) return 'Refreshing...';
     if (!isCurrentWeek) return 'Not Current Week';
-    if (!hasUnstartedGames) return 'All Games Started';
+    if (!hasUnstartedGames) return 'All Games Finished';
     return 'Refresh Odds';
   };
 
@@ -85,8 +85,8 @@ export const OddsRefreshButton: React.FC<OddsRefreshButtonProps> = ({
 
   const getTitle = () => {
     if (!isCurrentWeek) return 'Manual refresh only available for current week';
-    if (!hasUnstartedGames) return 'No unstarted games to refresh odds for';
-    return 'Refresh odds for unstarted games';
+    if (!hasUnstartedGames) return 'No unstarted or live games to refresh odds for';
+    return 'Refresh odds for unstarted and live games';
   };
 
   const getLastUpdatedText = () => {
