@@ -63,6 +63,7 @@ export interface GameMeta {
   homeTeam: string;
   awayTeam: string;
   status: 'scheduled' | 'live' | 'final';
+  network?: string;
 }
 
 export interface GameScore {

@@ -12,10 +12,17 @@ export class MockOddsProvider implements OddsProvider {
     const weekKey = `${season}_${week.toString().padStart(2, '0')}`;
     
     // Check week 1 specific data first, then general odds data
+    let rawData = [];
     if (season === 2025 && week === 1) {
-      return week1OddsData[weekKey] || [];
+      rawData = week1OddsData[weekKey] || [];
+    } else {
+      rawData = oddsData[weekKey] || [];
     }
     
-    return oddsData[weekKey] || [];
+    // Add provider field to indicate this is mock data
+    return rawData.map(odds => ({
+      ...odds,
+      provider: 'Mock Odds Provider'
+    }));
   }
 }

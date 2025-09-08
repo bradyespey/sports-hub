@@ -58,10 +58,17 @@ export const NFLStandings = () => {
     const fetchData = async () => {
       try {
         // Fetch schedule and odds for selected week
-        const [schedule, odds] = await Promise.all([
-          scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek }),
-          oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek })
-        ]);
+        const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
+        
+        let odds = await oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+        
+        // If no odds returned (API failed), fallback to mock data
+        if (odds.length === 0) {
+          console.warn('Primary odds provider returned no data, trying fallback');
+          const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
+          const mockProvider = new MockOddsProvider();
+          odds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+        }
 
         // Merge schedule, odds, and scores data
         const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });

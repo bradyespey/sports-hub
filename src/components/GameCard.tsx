@@ -51,7 +51,7 @@ export const GameCard = ({
 
   const getStatusDisplay = () => {
     if (isLive) {
-      const quarterText = game.quarter ? `${game.quarter}RD` : 'LIVE';
+      const quarterText = game.quarter ? `${game.quarter}${game.quarter === 1 ? 'ST' : game.quarter === 2 ? 'ND' : game.quarter === 3 ? 'RD' : 'TH'}` : 'LIVE';
       const timeText = game.timeRemaining || '';
       
       return (
@@ -223,17 +223,17 @@ export const GameCard = ({
 
           {/* Bottom Row - Odds and Status */}
           <div className="flex items-center justify-between pt-2 border-t">
-            <div className="text-xs text-muted-foreground">
-              {(game.spreadHome !== undefined || game.total !== undefined) && (
-                <span>
-                  Odds: {getTeamName(game.homeTeam)} {game.spreadHome > 0 ? '+' : ''}{game.spreadHome} O/U {game.total}
-                  {game.network && ` TV: ${game.network}`}
-                </span>
-              )}
-              {(!game.spreadHome && !game.total) && game.network && (
-                <span>TV: {game.network}</span>
-              )}
-            </div>
+         <div className="text-xs text-muted-foreground">
+           {(game.spreadHome !== undefined && game.spreadHome !== 0) || (game.total !== undefined && game.total !== 0) ? (
+             <span>
+               {getTeamName(game.homeTeam)} {game.spreadHome > 0 ? '+' : ''}{game.spreadHome} O/U {game.total}
+               {game.network && ` TV: ${game.network}`}
+               {game.sportsbook?.provider === 'Mock Odds Provider' && ' (MOCK)'}
+             </span>
+           ) : game.network ? (
+             <span>TV: {game.network}</span>
+           ) : null}
+         </div>
             <div className="text-right">
               {getStatusDisplay()}
             </div>

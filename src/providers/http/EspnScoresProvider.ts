@@ -29,6 +29,10 @@ export class EspnScoresProvider implements ScoresProvider {
         const normalizedAway = this.normalizeTeamAbbreviation(awayTeam.team.abbreviation);
         const normalizedHome = this.normalizeTeamAbbreviation(homeTeam.team.abbreviation);
         
+        // Extract broadcast information if available
+        const broadcast = competition.broadcasts?.[0];
+        const network = broadcast?.names?.[0] || broadcast?.network || null;
+
         return {
           gameId: `${season}-W${week.toString().padStart(2, '0')}-${normalizedAway}-${normalizedHome}`,
           season,
@@ -36,7 +40,8 @@ export class EspnScoresProvider implements ScoresProvider {
           kickoffUtc: new Date(event.date),
           homeTeam: normalizedHome,
           awayTeam: normalizedAway,
-          status: this.mapGameStatus(competition.status.type.name)
+          status: this.mapGameStatus(competition.status.type.name),
+          network
         };
       }) || [];
 
@@ -83,6 +88,10 @@ export class EspnScoresProvider implements ScoresProvider {
 
         if (!gameId) return null;
 
+        // Extract broadcast information if available
+        const broadcast = competition.broadcasts?.[0];
+        const network = broadcast?.names?.[0] || broadcast?.network || null;
+
         return {
           gameId,
           homeScore: parseInt(homeTeam.score) || 0,
@@ -90,7 +99,8 @@ export class EspnScoresProvider implements ScoresProvider {
           status: this.mapGameStatus(competition.status.type.name),
           quarter: competition.status.period || undefined,
           timeRemaining: competition.status.displayClock || undefined,
-          possession: this.getPossession(competition)
+          possession: this.getPossession(competition),
+          network
         };
       }).filter(Boolean) || [];
 

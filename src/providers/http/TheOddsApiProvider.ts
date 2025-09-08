@@ -1,10 +1,12 @@
 // src/providers/http/TheOddsApiProvider.ts
 import { OddsProvider } from '../interfaces';
 import { GameOdds } from '@/types';
+import { apiCache } from '@/lib/apiCache';
 
 export class TheOddsApiProvider implements OddsProvider {
   private apiKey = import.meta.env.VITE_ODDS_API_KEY;
-  private baseUrl = 'https://api.the-odds-api.com/v4';
+  private baseUrl = import.meta.env.VITE_ODDS_API_URL || 'https://api.the-odds-api.com/v4';
+  private static callCount = 0;
 
   async getWeekOdds({ season, week }: { season: number; week: number }): Promise<GameOdds[]> {
     if (!this.apiKey) {
@@ -12,30 +14,43 @@ export class TheOddsApiProvider implements OddsProvider {
       return [];
     }
 
+    // Check cache first
+    const cacheKey = `odds_${season}_${week}`;
+    const cachedData = apiCache.get<GameOdds[]>(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    if (week < 1) {
+      return [];
+    }
+
     try {
-      // The Odds API endpoint for NFL odds
-      // Fetching odds data
       const response = await fetch(
         `${this.baseUrl}/sports/americanfootball_nfl/odds?apiKey=${this.apiKey}&regions=us&markets=spreads,totals&oddsFormat=american&dateFormat=iso`
       );
 
       if (!response.ok) {
         console.error(`The Odds API error: ${response.status} ${response.statusText}`);
-        throw new Error(`The Odds API error: ${response.status} ${response.statusText}`);
+        return [];
       }
 
       const data = await response.json();
       
       // Transform The Odds API data to our format
-      return data.map((game: any) => {
+      const result = data.flatMap((game: any) => {
         const spreadMarket = game.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'spreads');
         const totalsMarket = game.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'totals');
         
         const homeTeam = this.normalizeTeamName(game.home_team);
         const awayTeam = this.normalizeTeamName(game.away_team);
         
-        // Generate gameId to match our format
-        const gameId = `${season}-W${week.toString().padStart(2, '0')}-${awayTeam}-${homeTeam}`;
+        // Try both possible gameId formats since team order might vary
+        const gameId1 = `${season}-W${week.toString().padStart(2, '0')}-${awayTeam}-${homeTeam}`;
+        const gameId2 = `${season}-W${week.toString().padStart(2, '0')}-${homeTeam}-${awayTeam}`;
+        
+        // We'll use the first format as primary, but we'll check both during matching
+        const gameId = gameId1;
         
         let spreadHome = 0;
         let spreadAway = 0;
@@ -57,25 +72,53 @@ export class TheOddsApiProvider implements OddsProvider {
           total = totalsMarket.outcomes[0].point || 0;
         }
 
-        return {
-          gameId,
-          spreadHome,
-          spreadAway,
-          total,
-          provider: game.bookmakers?.[0]?.title || 'The Odds API'
-        };
-      }).filter((odds: GameOdds) => {
-        // Filter to only include games for the requested week
-        // This is a simple filter - in production you'd want more sophisticated date matching
-        return true;
-      });
 
-      // Successfully loaded odds data
+        // Return both possible game ID formats for this game
+        return [
+          {
+            gameId: gameId1,
+            spreadHome,
+            spreadAway,
+            total,
+            provider: game.bookmakers?.[0]?.title || 'The Odds API'
+          },
+          {
+            gameId: gameId2,
+            spreadHome,
+            spreadAway,
+            total,
+            provider: game.bookmakers?.[0]?.title || 'The Odds API'
+          }
+        ];
+      }); // flatMap already handles the flattening, no additional filter needed for now
+
+      // Cache the successful result
+      apiCache.set(cacheKey, result, 5 * 60 * 1000);
+
+      return result;
 
     } catch (error) {
       console.error('Error fetching odds from The Odds API:', error);
+      console.warn('Falling back to mock odds data due to API error');
+      // Return empty array to allow mock provider fallback
       return [];
     }
+  }
+
+  private getWeekStartDate(week: number): Date {
+    // For testing purposes, use current date + week offset
+    // In production, this would be the actual NFL 2025 season dates
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + (week - 1) * 7);
+    return weekStart;
+  }
+
+  private getWeekEndDate(week: number): Date {
+    const weekStart = this.getWeekStartDate(week);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7); // 7 days later
+    return weekEnd;
   }
 
   private normalizeTeamName(teamName: string): string {

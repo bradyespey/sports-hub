@@ -65,11 +65,39 @@ export const CurrentWeek = () => {
 
     const fetchData = async () => {
       try {
-        // Fetch schedule and odds for selected week
-        const [schedule, odds] = await Promise.all([
-          scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek }),
-          oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek })
-        ]);
+        // Fetch schedule
+        const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
+        
+        // Start with mock odds data
+        const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
+        const mockProvider = new MockOddsProvider();
+        let odds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+        
+        // Check if we have odds for all games, if not, try to get missing ones
+        const gamesWithoutOdds = schedule.filter(game => 
+          !odds.some(odd => odd.gameId === game.gameId)
+        );
+        
+        if (gamesWithoutOdds.length > 0) {
+          console.log(`🔍 Found ${gamesWithoutOdds.length} games without odds, attempting to fetch...`);
+          
+          // Try to get real odds for missing games (only for current/future weeks)
+          if (selectedWeek >= 1) {
+            try {
+              const realOdds = await oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+              const matchingRealOdds = realOdds.filter(odd => 
+                gamesWithoutOdds.some(game => game.gameId === odd.gameId)
+              );
+              
+              if (matchingRealOdds.length > 0) {
+                console.log(`✅ Found ${matchingRealOdds.length} real odds for missing games`);
+                odds = [...odds, ...matchingRealOdds];
+              }
+            } catch (error) {
+              console.log('⚠️ Could not fetch real odds for missing games, using mock data');
+            }
+          }
+        }
 
         // Merge schedule, odds, and scores data
         const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });

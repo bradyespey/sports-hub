@@ -13,8 +13,11 @@ export class ProviderFactory {
   private static useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
   static createOddsProvider(): OddsProvider {
-    // Use mock odds provider for now due to API key issues
-    return new MockOddsProvider();
+    // Try real API first, but fallback to mock if API key is missing or invalid
+    if (this.useMock || !import.meta.env.VITE_ODDS_API_KEY) {
+      return new MockOddsProvider();
+    }
+    return new TheOddsApiProvider();
   }
 
   static createScoresProvider(): ScoresProvider {
