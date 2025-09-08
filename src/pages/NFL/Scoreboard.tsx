@@ -126,11 +126,23 @@ export const NFLScoreboard = () => {
     return () => unsubscribe();
   }, [user, games]);
 
-  const handlePickChange = (gameId: string, selection: string) => {
-    setPendingPicks(prev => ({
-      ...prev,
-      [gameId]: selection
-    }));
+  const handlePickChange = async (gameId: string, selection: string) => {
+    if (!user) return;
+
+    // Auto-save the pick immediately without using pendingPicks
+    try {
+      const pick: Pick = {
+        gameId,
+        uid: user.uid,
+        selection,
+        createdAt: new Date(),
+        locked: false,
+        revealed: false
+      };
+      await setDoc(doc(db, 'picks', `${gameId}_${user.uid}`), pick);
+    } catch (error) {
+      console.error('Error saving pick:', error);
+    }
   };
 
   const submitPicks = async () => {
@@ -196,10 +208,22 @@ export const NFLScoreboard = () => {
               onWeekChange={setSelectedWeek}
               availableWeeks={availableWeeks}
             />
-            <OddsRefreshButton
-              season={2025}
-              week={selectedWeek}
-            />
+            <div className="flex items-center space-x-3">
+              {Object.keys(pendingPicks).length > 0 && (
+                <Button 
+                  onClick={submitPicks}
+                  variant="outline"
+                  size="sm"
+                  className="text-sm"
+                >
+                  Save {Object.keys(pendingPicks).length} Pick{Object.keys(pendingPicks).length !== 1 ? 's' : ''}
+                </Button>
+              )}
+              <OddsRefreshButton
+                season={2025}
+                week={selectedWeek}
+              />
+            </div>
           </div>
         </div>
 
@@ -212,7 +236,7 @@ export const NFLScoreboard = () => {
                 <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
                 Live
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {games
                   .filter(game => game.status === 'live')
                   .map(game => {
@@ -251,7 +275,7 @@ export const NFLScoreboard = () => {
           {games.filter(game => game.status === 'scheduled').length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-4 text-blue-600">Upcoming</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {games
                   .filter(game => game.status === 'scheduled')
                   .sort((a, b) => new Date(a.kickoffUtc).getTime() - new Date(b.kickoffUtc).getTime())
@@ -291,7 +315,7 @@ export const NFLScoreboard = () => {
           {games.filter(game => game.status === 'final').length > 0 && (
             <div>
               <h2 className="text-lg font-semibold mb-4 text-gray-600">Finished</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {games
                   .filter(game => game.status === 'final')
                   .sort((a, b) => new Date(a.kickoffUtc).getTime() - new Date(b.kickoffUtc).getTime())
@@ -328,22 +352,6 @@ export const NFLScoreboard = () => {
           )}
         </div>
 
-        {/* Submit Button */}
-        {Object.keys(pendingPicks).length > 0 && (
-          <div className="sticky bottom-4">
-            <Card className="game-card">
-              <CardContent className="p-4">
-                <Button 
-                  onClick={submitPicks}
-                  className="w-full"
-                  size="lg"
-                >
-                  Submit {Object.keys(pendingPicks).length} Pick{Object.keys(pendingPicks).length !== 1 ? 's' : ''}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
     </div>
   );

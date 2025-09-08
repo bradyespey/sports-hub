@@ -180,6 +180,10 @@ npm run dev
 - **Spread-Only Display**: Shows `[Team] [+/-][Spread] TV: [Network]` format as requested
 - **Server-Side Caching**: ESPN API calls cached for 30 minutes to prevent abuse
 - **Client-Side Caching**: Schedule data cached 30 min, live scores 30 sec
+- **Improved Pick UX**: Auto-save picks with immediate visual feedback, removed bottom submit bar
+- **Consistent Odds Display**: Always shows favored team with negative spread for clarity
+- **Smart Pick Reveals**: Picks only revealed after kickoff AND both players submit
+- **Mobile-Optimized Pick Buttons**: Larger touch targets and responsive design
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -230,6 +234,11 @@ npm run dev
 ### 8. ESPN/Odds API Team Matching
 **Problem**: Only 7 of 16 games matching due to team name differences (GB vs Green Bay Packers)
 **Solution**: Comprehensive team name mapping with full names, abbreviations, and city variations
+**Status**: Resolved
+
+### 9. Pick Selection UX Issues
+**Problem**: Intrusive bottom submit bar, picks not persisting on refresh, inconsistent odds display, premature pick reveals
+**Solution**: Implemented auto-save with immediate visual feedback, removed bottom bar, added top save button, fixed odds to always show favored team, corrected reveal logic to require both kickoff AND both players picking
 **Status**: Resolved
 
 ## Next Steps

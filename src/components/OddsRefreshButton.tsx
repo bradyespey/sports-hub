@@ -43,7 +43,6 @@ export function OddsRefreshButton({ season, week, className = "" }: OddsRefreshB
       await syncLastUpdated();
       
       // Show brief success message
-      console.log(`Odds refresh completed: ${refreshResult.updated} updated, ${refreshResult.filledPast} filled`);
     } catch (error) {
       console.error("Failed to refresh odds:", error);
       alert(`Failed to refresh odds: ${error instanceof Error ? error.message : 'Unknown error'}`);

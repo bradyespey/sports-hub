@@ -40,10 +40,8 @@ export class EspnScoresProvider implements ScoresProvider {
       
       let data: any;
       if (cachedData) {
-        console.log(`Using cached ESPN schedule for week ${week}`);
         data = cachedData;
       } else {
-        console.log(`Fetching fresh ESPN schedule for week ${week}`);
         // ESPN API endpoint for NFL schedule
         const response = await fetch(
           `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`
@@ -102,10 +100,8 @@ export class EspnScoresProvider implements ScoresProvider {
       
       let data: any;
       if (cachedData) {
-        console.log('Using cached ESPN live scores');
         data = cachedData;
       } else {
-        console.log('Fetching fresh ESPN live scores');
         // For live scores, we'll fetch the current week's scoreboard
         // ESPN doesn't have a direct endpoint for specific game IDs, so we fetch all and filter
         const response = await fetch(
@@ -211,12 +207,10 @@ export class EspnScoresProvider implements ScoresProvider {
       
       // If more than 4 hours have passed, likely the game is finished
       if (hoursElapsed > 4) {
-        console.log(`Game likely finished (${hoursElapsed.toFixed(1)} hours elapsed), marking as final`);
         mappedStatus = 'final';
       }
     }
     
-    console.log(`ESPN Status: ${espnStatus} -> Mapped: ${mappedStatus}`);
     return mappedStatus;
   }
 }

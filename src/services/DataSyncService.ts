@@ -22,11 +22,9 @@ export class DataSyncService {
    */
   startAutoSync(intervalMinutes: number = 5): void {
     if (this.isRunning) {
-      console.log('Data sync already running');
       return;
     }
 
-    console.log(`🔄 Starting auto data sync every ${intervalMinutes} minutes`);
     this.isRunning = true;
 
     // Initial sync
@@ -47,7 +45,6 @@ export class DataSyncService {
       this.syncInterval = null;
     }
     this.isRunning = false;
-    console.log('⏹️ Data sync stopped');
   }
 
   /**
@@ -56,7 +53,6 @@ export class DataSyncService {
   async syncCurrentWeekData(): Promise<void> {
     try {
       const currentWeek = this.getCurrentWeek();
-      console.log(`🔄 Syncing data for Week ${currentWeek.week}...`);
 
       const scoresProvider = ProviderFactory.createScoresProvider();
       const oddsProvider = ProviderFactory.createOddsProvider();
@@ -95,12 +91,10 @@ export class DataSyncService {
       // Emit update event for components to listen to
       this.emitDataUpdate(updatedGames);
 
-      console.log(`✅ Synced ${updatedGames.length} games for Week ${currentWeek.week}`);
       
       // Log live games
       const liveGames = updatedGames.filter(g => g.status === 'live');
       if (liveGames.length > 0) {
-        console.log(`🔴 ${liveGames.length} live games detected`);
       }
 
     } catch (error) {

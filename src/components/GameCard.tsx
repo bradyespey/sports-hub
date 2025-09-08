@@ -1,5 +1,5 @@
 // src/components/GameCard.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Game, Pick } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,17 +27,24 @@ export const GameCard = ({
   currentUserId
 }: GameCardProps) => {
   const [selectedPick, setSelectedPick] = useState(userPick?.selection || '');
+  
+  // Update selectedPick when userPick changes (e.g., on page refresh)
+  useEffect(() => {
+    setSelectedPick(userPick?.selection || '');
+  }, [userPick?.selection]);
   const logosProvider = ProviderFactory.createLogosProvider();
   
   const isLocked = game.kickoffUtc <= new Date();
+  const bothPlayersPicked = userPick && opponentPick;
+  const shouldShowPickButtons = !isLocked || !bothPlayersPicked;
   const kickoffLocal = dayjs(game.kickoffUtc).tz(LOCAL_TIMEZONE);
   const isLive = game.status === 'live';
   const isFinal = game.status === 'final';
 
-  const handlePickChange = (selection: string) => {
+  const handlePickChange = async (selection: string) => {
     if (isLocked) return;
     setSelectedPick(selection);
-    onPickChange(game.gameId, selection);
+    await onPickChange(game.gameId, selection);
   };
 
   const getWinner = () => {
@@ -89,11 +96,14 @@ export const GameCard = ({
     
     const badges = [];
     
-    if (userPickedThis) {
-      badges.push("Brady");
-    }
-    if (opponentPickedThis) {
-      badges.push("Jenny");
+    // Only show badges if both players have picked AND game has started
+    if (userPick && opponentPick && (isLive || isFinal)) {
+      if (userPickedThis) {
+        badges.push("Brady");
+      }
+      if (opponentPickedThis) {
+        badges.push("Jenny");
+      }
     }
     
     return badges;
@@ -115,8 +125,8 @@ export const GameCard = ({
 
   return (
     <Card className="game-card hover:shadow-md transition-shadow">
-      <CardContent className="p-3">
-        <div className="space-y-2">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-2 sm:space-y-3">
           {/* Away Team Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -128,7 +138,7 @@ export const GameCard = ({
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${game.awayTeam}&size=24&background=f3f4f6&color=374151`;
                 }}
               />
-              <span className={`font-semibold text-sm ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <span className={`font-semibold text-sm sm:text-base ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {getTeamName(game.awayTeam)}
               </span>
               {(isLive || isFinal) && game.awayScore !== undefined && (
@@ -144,14 +154,14 @@ export const GameCard = ({
             </div>
             
             <div className="flex items-center space-x-1">
-              {!isLocked ? (
+              {shouldShowPickButtons ? (
                 <Button
                   variant={selectedPick === game.awayTeam ? "default" : "outline"}
                   size="sm"
                   onClick={() => handlePickChange(game.awayTeam)}
-                  className="text-xs h-6 px-2"
+                  className="text-xs h-7 px-3 min-w-[60px] sm:min-w-[50px]"
                 >
-                  Pick
+                  {selectedPick === game.awayTeam ? "✓" : "Pick"}
                 </Button>
               ) : (
                 <div className="flex space-x-1">
@@ -180,7 +190,7 @@ export const GameCard = ({
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${game.homeTeam}&size=24&background=f3f4f6&color=374151`;
                 }}
               />
-              <span className={`font-semibold text-sm ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <span className={`font-semibold text-sm sm:text-base ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
                 {getTeamName(game.homeTeam)}
               </span>
               {(isLive || isFinal) && game.homeScore !== undefined && (
@@ -196,14 +206,14 @@ export const GameCard = ({
             </div>
             
             <div className="flex items-center space-x-1">
-              {!isLocked ? (
+              {shouldShowPickButtons ? (
                 <Button
                   variant={selectedPick === game.homeTeam ? "default" : "outline"}
                   size="sm"
                   onClick={() => handlePickChange(game.homeTeam)}
-                  className="text-xs h-6 px-2"
+                  className="text-xs h-7 px-3 min-w-[60px] sm:min-w-[50px]"
                 >
-                  Pick
+                  {selectedPick === game.homeTeam ? "✓" : "Pick"}
                 </Button>
               ) : (
                 <div className="flex space-x-1">
@@ -226,7 +236,7 @@ export const GameCard = ({
          <div className="text-xs text-muted-foreground">
            {game.spreadHome !== undefined && game.spreadHome !== 0 ? (
              <span>
-               {getTeamName(game.homeTeam)} {game.spreadHome > 0 ? '+' : ''}{game.spreadHome}
+               {game.spreadHome < 0 ? getTeamName(game.homeTeam) : getTeamName(game.awayTeam)} {game.spreadHome < 0 ? game.spreadHome : -game.spreadHome}
                {game.network && ` TV: ${game.network}`}
              </span>
            ) : game.network ? (

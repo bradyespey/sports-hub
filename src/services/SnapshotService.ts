@@ -108,7 +108,6 @@ export class SnapshotService {
       }
       
       const result = await response.json();
-      console.log('Pulse triggered:', result);
     } catch (error) {
       console.error('Error triggering pulse:', error);
     }
