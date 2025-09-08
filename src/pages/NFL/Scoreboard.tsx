@@ -13,6 +13,7 @@ import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { OddsRefreshButton } from '@/components/OddsRefreshButton';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
+import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 export const NFLScoreboard = () => {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export const NFLScoreboard = () => {
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [showPickRules, setShowPickRules] = useState(false);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
@@ -226,6 +228,38 @@ export const NFLScoreboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Pick Rules Info */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mt-0.5">
+                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">How Picks Work</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPickRules(!showPickRules)}
+                    className="h-6 w-6 p-0"
+                  >
+                    {showPickRules ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                </div>
+                {showPickRules && (
+                  <div className="text-sm text-muted-foreground space-y-1 mt-3">
+                    <p>• <strong>Make your picks:</strong> Click "Pick" next to your chosen team for each game</p>
+                    <p>• <strong>Change anytime:</strong> You can modify picks up until kickoff for each game</p>
+                    <p>• <strong>Strategic reveals:</strong> Picks are only revealed after both players submit AND kickoff occurs</p>
+                    <p>• <strong>Auto-save:</strong> Picks save automatically when you select them</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Games - Sorted like Yahoo: Live, Upcoming, Finished */}
         <div className="space-y-6">

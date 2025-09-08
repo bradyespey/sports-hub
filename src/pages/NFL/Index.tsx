@@ -28,6 +28,11 @@ export const NFLIndex = () => {
               <p className="text-muted-foreground mb-4">
                 View live scores, make picks, and track your progress against Jenny.
               </p>
+              <div className="text-xs text-muted-foreground mb-4 space-y-1">
+                <p>• Picks auto-save when selected</p>
+                <p>• Change picks until kickoff</p>
+                <p>• Reveals after both players pick + kickoff</p>
+              </div>
               <Button asChild className="w-full">
                 <Link to="/nfl/scoreboard">View Scoreboard</Link>
               </Button>
