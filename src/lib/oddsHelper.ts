@@ -47,15 +47,14 @@ export async function getCachedOddsForGames(games: Game[]): Promise<Map<string, 
 }
 
 /**
- * Parses raw odds data from The Odds API format
+ * Parses raw odds data from The Odds API format (spreads only)
  */
 function parseOddsData(cachedOdds: CachedOdds): OddsData | null {
-  let spreadHome = 0, spreadAway = 0, total = 0;
+  let spreadHome = 0, spreadAway = 0;
   
   if (cachedOdds?.data?.bookmakers?.[0]?.markets) {
     const markets = cachedOdds.data.bookmakers[0].markets;
     const spreadsMarket = markets.find((m: any) => m.key === 'spreads');
-    const totalsMarket = markets.find((m: any) => m.key === 'totals');
     
     if (spreadsMarket?.outcomes) {
       const homeSpread = spreadsMarket.outcomes.find((o: any) => o.name === cachedOdds.data.home_team);
@@ -63,16 +62,12 @@ function parseOddsData(cachedOdds: CachedOdds): OddsData | null {
       spreadHome = homeSpread?.point || 0;
       spreadAway = awaySpread?.point || 0;
     }
-    
-    if (totalsMarket?.outcomes?.[0]) {
-      total = totalsMarket.outcomes[0].point || 0;
-    }
   }
 
   return {
     spreadHome,
     spreadAway,
-    total,
+    total: 0, // Not fetching totals anymore
     provider: cachedOdds.provider || 'The Odds API'
   };
 }

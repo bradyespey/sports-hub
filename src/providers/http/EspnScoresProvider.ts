@@ -2,23 +2,63 @@
 import { ScoresProvider } from '../interfaces';
 import { GameMeta, GameScore } from '@/types';
 
+// Simple cache to prevent excessive ESPN API calls
+class ESPNCache {
+  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+  
+  set(key: string, data: any, ttlMs: number = 5 * 60 * 1000): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs
+    });
+  }
+  
+  get(key: string): any | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+}
+
+const espnCache = new ESPNCache();
+
 export class EspnScoresProvider implements ScoresProvider {
   private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
   async getWeekSchedule({ season, week }: { season: number; week: number }): Promise<GameMeta[]> {
     try {
-      // ESPN API endpoint for NFL schedule
-      // Fetching ESPN schedule
-      const response = await fetch(
-        `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`
-      );
+      // Check cache first (30 minutes for schedule data)
+      const cacheKey = `schedule_${season}_${week}`;
+      const cachedData = espnCache.get(cacheKey);
+      
+      let data: any;
+      if (cachedData) {
+        console.log(`Using cached ESPN schedule for week ${week}`);
+        data = cachedData;
+      } else {
+        console.log(`Fetching fresh ESPN schedule for week ${week}`);
+        // ESPN API endpoint for NFL schedule
+        const response = await fetch(
+          `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`
+        );
 
-      if (!response.ok) {
-        console.error(`ESPN API error: ${response.status} ${response.statusText}`);
-        throw new Error(`ESPN API error: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+          console.error(`ESPN API error: ${response.status} ${response.statusText}`);
+          throw new Error(`ESPN API error: ${response.status} ${response.statusText}`);
+        }
+
+        data = await response.json();
+        
+        // Cache for 30 minutes (schedule doesn't change frequently)
+        espnCache.set(cacheKey, data, 30 * 60 * 1000);
       }
-
-      const data = await response.json();
       
       const events = data.events?.map((event: any) => {
         const competition = event.competitions[0];
@@ -56,19 +96,31 @@ export class EspnScoresProvider implements ScoresProvider {
 
   async getLiveScores({ gameIds }: { gameIds: string[] }): Promise<GameScore[]> {
     try {
-      // For live scores, we'll fetch the current week's scoreboard
-      // ESPN doesn't have a direct endpoint for specific game IDs, so we fetch all and filter
-      // Fetching live scores
-      // Fetch current week's scoreboard instead of today's date
-      const response = await fetch(
-        `${this.baseUrl}/scoreboard?seasontype=2&week=1`
-      );
+      // Check cache first (shorter cache for live scores - 30 seconds)
+      const cacheKey = `scores_live`;
+      const cachedData = espnCache.get(cacheKey);
+      
+      let data: any;
+      if (cachedData) {
+        console.log('Using cached ESPN live scores');
+        data = cachedData;
+      } else {
+        console.log('Fetching fresh ESPN live scores');
+        // For live scores, we'll fetch the current week's scoreboard
+        // ESPN doesn't have a direct endpoint for specific game IDs, so we fetch all and filter
+        const response = await fetch(
+          `${this.baseUrl}/scoreboard?seasontype=2&week=1`
+        );
 
-      if (!response.ok) {
-        throw new Error(`ESPN API error: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`ESPN API error: ${response.status} ${response.statusText}`);
+        }
+
+        data = await response.json();
+        
+        // Cache for only 30 seconds (scores change frequently during games)
+        espnCache.set(cacheKey, data, 30 * 1000);
       }
-
-      const data = await response.json();
       
       const scores = data.events?.map((event: any) => {
         const competition = event.competitions[0];

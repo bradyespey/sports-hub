@@ -1,19 +1,20 @@
-import { Handler } from '@netlify/functions';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import type { Handler } from "@netlify/functions";
+import * as admin from "firebase-admin";
 
-// Initialize Firebase Admin (only once)
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+let app: admin.app.App | null = null;
+
+function getDb() {
+  if (!app) {
+    app = admin.initializeApp({
+      credential: admin.credential.cert({
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+  return admin.firestore();
 }
-
-const db = getFirestore();
 
 interface APIUsage {
   used: number;
@@ -45,6 +46,7 @@ class OddsAPIClient {
 
   async getUsage(): Promise<APIUsage | null> {
     try {
+      const db = getDb();
       const usageDoc = await db.collection('system').doc('api_usage').get();
       return usageDoc.exists ? usageDoc.data() as APIUsage : null;
     } catch (error) {
@@ -55,6 +57,7 @@ class OddsAPIClient {
 
   async updateUsage(used: number, remaining: number, lastCost: number): Promise<void> {
     try {
+      const db = getDb();
       await db.collection('system').doc('api_usage').set({
         used,
         remaining,
@@ -68,6 +71,7 @@ class OddsAPIClient {
 
   async getWeekSnapshot(season: number, week: number, dataType: 'odds' | 'scores'): Promise<WeekSnapshot | null> {
     try {
+      const db = getDb();
       const snapshotDoc = await db
         .collection('weeks')
         .doc(`${season}_W${week.toString().padStart(2, '0')}`)
@@ -84,6 +88,7 @@ class OddsAPIClient {
 
   async saveWeekSnapshot(snapshot: WeekSnapshot): Promise<void> {
     try {
+      const db = getDb();
       await db
         .collection('weeks')
         .doc(`${snapshot.season}_W${snapshot.week.toString().padStart(2, '0')}`)

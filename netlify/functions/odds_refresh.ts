@@ -7,13 +7,112 @@ function getDb() {
   if (!app) {
     app = admin.initializeApp({
       credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
       }),
     });
   }
   return admin.firestore();
+}
+
+// Helper function to normalize team abbreviations (matching ESPN provider)
+function normalizeTeamAbbreviation(abbrev: string): string {
+  const teamMap: Record<string, string> = {
+    'WSH': 'WAS',  // Washington Commanders
+    'LAR': 'LAR',  // Los Angeles Rams (already correct)
+    'LAC': 'LAC',  // Los Angeles Chargers (already correct)
+  };
+  return teamMap[abbrev] || abbrev;
+}
+
+// Comprehensive team name mapping for matching with Odds API
+function getTeamNames(abbrev: string): string[] {
+  const teamNames: Record<string, string[]> = {
+    'ARI': ['Arizona Cardinals', 'Arizona', 'Cardinals'],
+    'ATL': ['Atlanta Falcons', 'Atlanta', 'Falcons'],
+    'BAL': ['Baltimore Ravens', 'Baltimore', 'Ravens'],
+    'BUF': ['Buffalo Bills', 'Buffalo', 'Bills'],
+    'CAR': ['Carolina Panthers', 'Carolina', 'Panthers'],
+    'CHI': ['Chicago Bears', 'Chicago', 'Bears'],
+    'CIN': ['Cincinnati Bengals', 'Cincinnati', 'Bengals'],
+    'CLE': ['Cleveland Browns', 'Cleveland', 'Browns'],
+    'DAL': ['Dallas Cowboys', 'Dallas', 'Cowboys'],
+    'DEN': ['Denver Broncos', 'Denver', 'Broncos'],
+    'DET': ['Detroit Lions', 'Detroit', 'Lions'],
+    'GB': ['Green Bay Packers', 'Green Bay', 'Packers'],
+    'HOU': ['Houston Texans', 'Houston', 'Texans'],
+    'IND': ['Indianapolis Colts', 'Indianapolis', 'Colts'],
+    'JAX': ['Jacksonville Jaguars', 'Jacksonville', 'Jaguars'],
+    'KC': ['Kansas City Chiefs', 'Kansas City', 'Chiefs'],
+    'LAC': ['Los Angeles Chargers', 'LA Chargers', 'Chargers'],
+    'LAR': ['Los Angeles Rams', 'LA Rams', 'Rams'],
+    'LV': ['Las Vegas Raiders', 'Las Vegas', 'Raiders'],
+    'MIA': ['Miami Dolphins', 'Miami', 'Dolphins'],
+    'MIN': ['Minnesota Vikings', 'Minnesota', 'Vikings'],
+    'NE': ['New England Patriots', 'New England', 'Patriots'],
+    'NO': ['New Orleans Saints', 'New Orleans', 'Saints'],
+    'NYG': ['New York Giants', 'NY Giants', 'Giants'],
+    'NYJ': ['New York Jets', 'NY Jets', 'Jets'],
+    'PHI': ['Philadelphia Eagles', 'Philadelphia', 'Eagles'],
+    'PIT': ['Pittsburgh Steelers', 'Pittsburgh', 'Steelers'],
+    'SEA': ['Seattle Seahawks', 'Seattle', 'Seahawks'],
+    'SF': ['San Francisco 49ers', 'San Francisco', '49ers'],
+    'TB': ['Tampa Bay Buccaneers', 'Tampa Bay', 'Buccaneers'],
+    'TEN': ['Tennessee Titans', 'Tennessee', 'Titans'],
+    'WAS': ['Washington Commanders', 'Washington', 'Commanders']
+  };
+  
+  return teamNames[abbrev] || [abbrev];
+}
+
+// Helper function to map game status
+function mapGameStatus(espnStatus: string): 'scheduled' | 'live' | 'final' {
+  const statusMap: Record<string, 'scheduled' | 'live' | 'final'> = {
+    'STATUS_SCHEDULED': 'scheduled',
+    'STATUS_IN_PROGRESS': 'live',
+    'STATUS_HALFTIME': 'live',
+    'STATUS_END_PERIOD': 'live',
+    'STATUS_FINAL': 'final',
+    'STATUS_FINAL_OVERTIME': 'final'
+  };
+  return statusMap[espnStatus] || 'scheduled';
+}
+
+// Cache helpers to reduce ESPN API calls
+async function getCachedData(db: any, key: string): Promise<any | null> {
+  try {
+    const cacheDoc = await db.collection('cache').doc(key).get();
+    if (!cacheDoc.exists) return null;
+    
+    const data = cacheDoc.data();
+    const now = Date.now();
+    
+    // Check if cache is still valid
+    if (data.expiresAt && now > data.expiresAt) {
+      // Cache expired, delete it
+      await db.collection('cache').doc(key).delete();
+      return null;
+    }
+    
+    return data.value;
+  } catch (error) {
+    console.error('Error reading cache:', error);
+    return null;
+  }
+}
+
+async function setCachedData(db: any, key: string, value: any, ttlMs: number): Promise<void> {
+  try {
+    const expiresAt = Date.now() + ttlMs;
+    await db.collection('cache').doc(key).set({
+      value,
+      expiresAt,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error writing cache:', error);
+  }
 }
 
 type Body = {
@@ -46,16 +145,56 @@ export const handler: Handler = async (event) => {
   const season = body.season || 2025;
   const week = body.week || 1;
 
-  console.log(`Refreshing odds for season ${season}, week ${week}`);
-
-  // Load games for target week
-  const gamesSnap = await db.collection("games")
-    .where("season", "==", season)
-    .where("week", "==", week)
-    .get();
-
-  const games = gamesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-  console.log(`Found ${games.length} games for week ${week}`);
+  // Fetch games from ESPN API instead of Firestore
+  let games: any[] = [];
+  try {
+    // Use a simple cache key for ESPN data
+    const cacheKey = `espn_schedule_${season}_${week}`;
+    
+    // Check if we have cached ESPN data (cache for 30 minutes for schedule data)
+    let espnData: any = null;
+    const cachedEspnData = await getCachedData(db, cacheKey);
+    
+        if (cachedEspnData) {
+          espnData = cachedEspnData;
+        } else {
+      const espnResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${week}`);
+      if (!espnResponse.ok) {
+        throw new Error(`ESPN API error: ${espnResponse.status} ${espnResponse.statusText}`);
+      }
+      
+      espnData = await espnResponse.json();
+      
+      // Cache the ESPN data for 30 minutes
+      await setCachedData(db, cacheKey, espnData, 30 * 60 * 1000);
+    }
+    games = espnData.events?.map((event: any) => {
+      const competition = event.competitions[0];
+      const homeTeam = competition.competitors.find((c: any) => c.homeAway === 'home');
+      const awayTeam = competition.competitors.find((c: any) => c.homeAway === 'away');
+      
+      // Normalize team abbreviations
+      const normalizedAway = normalizeTeamAbbreviation(awayTeam.team.abbreviation);
+      const normalizedHome = normalizeTeamAbbreviation(homeTeam.team.abbreviation);
+      
+      return {
+        gameId: `${season}-W${week.toString().padStart(2, '0')}-${normalizedAway}-${normalizedHome}`,
+        season,
+        week,
+        kickoffUtc: event.date,
+        homeTeam: normalizedHome,
+        awayTeam: normalizedAway,
+        status: mapGameStatus(competition.status.type.name)
+      };
+        }) || [];
+  } catch (error) {
+    console.error('Error fetching from ESPN API:', error);
+    return { 
+      statusCode: 502, 
+      body: `ESPN API error: ${error}`,
+      headers: { "content-type": "application/json", "Access-Control-Allow-Origin": "*" }
+    };
+  }
 
   // Partition games by time and odds presence
   const nowIso = new Date().toISOString();
@@ -83,8 +222,6 @@ export const handler: Handler = async (event) => {
     }
   }
 
-  console.log(`To update: ${toUpdate.length}, To fill once: ${toFillOnce.length}`);
-
   // If nothing to do, return early
   if (toUpdate.length === 0 && toFillOnce.length === 0) {
     return { 
@@ -94,13 +231,11 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // Fetch league-wide odds once (markets=h2h&regions=us)
+  // Fetch league-wide odds once (markets=spreads&regions=us)
   const url = new URL(process.env.ODDS_API_URL as string);
   url.searchParams.set("apiKey", process.env.ODDS_API_KEY as string);
-  url.searchParams.set("markets", "h2h");
+  url.searchParams.set("markets", "spreads");
   url.searchParams.set("regions", "us");
-
-  console.log(`Fetching odds from: ${url.toString().replace(process.env.ODDS_API_KEY as string, 'XXX')}`);
 
   const resp = await fetch(url.toString());
   if (!resp.ok) {
@@ -113,7 +248,6 @@ export const handler: Handler = async (event) => {
     };
   }
   const providerPayload = await resp.json() as any[];
-  console.log(`Received ${providerPayload.length} events from odds API`);
 
   // Index provider data by event id and by team tuple for loose matching
   const byEventId = new Map<string, any>();
@@ -124,24 +258,42 @@ export const handler: Handler = async (event) => {
   // Helper to find provider game for our game record
   function resolveProviderGame(g: any) {
     if (g.oddsEventId && byEventId.has(g.oddsEventId)) {
-      console.log(`Found exact match for ${g.gameId} via oddsEventId`);
       return byEventId.get(g.oddsEventId);
     }
     
-    // Fallback: match by team names in payload (simple contains check)
+    // Get all possible team names for our teams
+    const homeTeamNames = getTeamNames(g.homeTeam);
+    const awayTeamNames = getTeamNames(g.awayTeam);
+    
+    // Match by comprehensive team names
     for (const evt of providerPayload) {
-      const th = evt.home_team?.toLowerCase?.() || "";
-      const ta = evt.away_team?.toLowerCase?.() || "";
-      const gh = String(g.homeTeam || "").toLowerCase();
-      const ga = String(g.awayTeam || "").toLowerCase();
+      const oddsHome = evt.home_team || "";
+      const oddsAway = evt.away_team || "";
       
-      if ((th.includes(gh) && ta.includes(ga)) || (th.includes(ga) && ta.includes(gh))) {
-        console.log(`Found team name match for ${g.gameId}: ${g.homeTeam} vs ${g.awayTeam}`);
+      // Check if any of our team names match the odds API team names
+      const homeMatch = homeTeamNames.some(name => 
+        oddsHome.toLowerCase().includes(name.toLowerCase()) || 
+        name.toLowerCase().includes(oddsHome.toLowerCase())
+      );
+      const awayMatch = awayTeamNames.some(name => 
+        oddsAway.toLowerCase().includes(name.toLowerCase()) || 
+        name.toLowerCase().includes(oddsAway.toLowerCase())
+      );
+      
+      // Also check reverse (home/away might be swapped)
+      const homeMatchReverse = homeTeamNames.some(name => 
+        oddsAway.toLowerCase().includes(name.toLowerCase()) || 
+        name.toLowerCase().includes(oddsAway.toLowerCase())
+      );
+      const awayMatchReverse = awayTeamNames.some(name => 
+        oddsHome.toLowerCase().includes(name.toLowerCase()) || 
+        name.toLowerCase().includes(oddsHome.toLowerCase())
+      );
+      
+      if ((homeMatch && awayMatch) || (homeMatchReverse && awayMatchReverse)) {
         return evt;
       }
     }
-    
-    console.log(`No match found for ${g.gameId}: ${g.homeTeam} vs ${g.awayTeam}`);
     return null;
   }
 
@@ -192,7 +344,6 @@ export const handler: Handler = async (event) => {
   }, { merge: true });
 
   await batch.commit();
-  console.log(`Batch committed: ${updated} updated, ${filledPast} filled past`);
 
   // Credits headers for usage monitor (optional)
   const remaining = resp.headers.get("x-requests-remaining") || null;
@@ -201,7 +352,7 @@ export const handler: Handler = async (event) => {
     await db.collection("system").doc("api_usage").set({
       remaining, 
       lastRequestAt: admin.firestore.FieldValue.serverTimestamp(), 
-      lastCost: "1 credit (h2h,us)"
+      lastCost: "1 credit (spreads,us)"
     }, { merge: true });
   }
 

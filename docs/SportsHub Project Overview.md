@@ -175,6 +175,11 @@ npm run dev
 - **Real Data Only**: App now uses only real-time data from external APIs
 - **Sticky Navigation**: Week selector and refresh button stay fixed when scrolling
 - **Efficient API Usage**: 2 credits per refresh call, cached to prevent redundant requests
+- **Cost-Optimized Odds**: Reduced from 3 to 1 credit per call by fetching only spreads market
+- **Perfect Team Matching**: All 16 games now match correctly between ESPN and Odds API
+- **Spread-Only Display**: Shows `[Team] [+/-][Spread] TV: [Network]` format as requested
+- **Server-Side Caching**: ESPN API calls cached for 30 minutes to prevent abuse
+- **Client-Side Caching**: Schedule data cached 30 min, live scores 30 sec
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -218,8 +223,13 @@ npm run dev
 **Status**: Resolved
 
 ### 7. The Odds API Integration
-**Problem**: 401/422 errors, incorrect week filtering, high API usage costs
-**Solution**: Removed date filtering, added proper error handling, implemented 5-minute caching, week-specific filtering
+**Problem**: 401/422 errors, incorrect week filtering, high API usage costs, incomplete team matching
+**Solution**: Removed date filtering, added proper error handling, implemented comprehensive team name mapping, optimized to spreads-only (1 credit vs 3)
+**Status**: Resolved
+
+### 8. ESPN/Odds API Team Matching
+**Problem**: Only 7 of 16 games matching due to team name differences (GB vs Green Bay Packers)
+**Solution**: Comprehensive team name mapping with full names, abbreviations, and city variations
 **Status**: Resolved
 
 ## Next Steps
@@ -267,10 +277,17 @@ npm run dev
 - **Database**: Firestore NoSQL
 - **Features**: User management, data persistence
 
-### External APIs
-- **The Odds API**: Sports betting odds and spreads
-- **ESPN API**: Live game scores and team logos
-- **Future**: Sleeper/Yahoo fantasy integration
+### The Odds API
+- **Endpoint**: `/v4/sports/americanfootball_nfl/odds`
+- **Authentication**: API key (500 requests/month free tier)
+- **Usage**: Spreads only (1 credit per call) for cost optimization
+- **Capabilities**: Real-time NFL betting spreads with comprehensive team matching
+
+### ESPN API
+- **Endpoint**: `/apis/site/v2/sports/football/nfl/scoreboard`
+- **Authentication**: None required
+- **Caching**: 30 minutes for schedule, 30 seconds for live scores
+- **Capabilities**: Live game scores, schedules, team logos
 
 ## Data Sources
 

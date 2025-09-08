@@ -224,9 +224,9 @@ export const GameCard = ({
           {/* Bottom Row - Odds and Status */}
           <div className="flex items-center justify-between pt-2 border-t">
          <div className="text-xs text-muted-foreground">
-           {(game.spreadHome !== undefined && game.spreadHome !== 0) || (game.total !== undefined && game.total !== 0) ? (
+           {game.spreadHome !== undefined && game.spreadHome !== 0 ? (
              <span>
-               {getTeamName(game.homeTeam)} {game.spreadHome > 0 ? '+' : ''}{game.spreadHome} O/U {game.total}
+               {getTeamName(game.homeTeam)} {game.spreadHome > 0 ? '+' : ''}{game.spreadHome}
                {game.network && ` TV: ${game.network}`}
              </span>
            ) : game.network ? (
