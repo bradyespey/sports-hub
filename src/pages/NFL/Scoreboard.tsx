@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
+import { OddsRefreshButton } from '@/components/OddsRefreshButton';
+import { OddsService } from '@/services/OddsService';
 
 export const NFLScoreboard = () => {
   const { user } = useAuth();
@@ -18,76 +20,36 @@ export const NFLScoreboard = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
-  const [refreshingOdds, setRefreshingOdds] = useState(false);
   const [canRefreshOdds, setCanRefreshOdds] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
   const oddsProvider = ProviderFactory.createOddsProvider();
+  const oddsService = new OddsService();
 
-  // Manual odds refresh function - only for unstarted games in current week
-  const refreshOdds = async () => {
-    if (!selectedWeek || !canRefreshOdds) return;
+  // Check if a week is the current NFL week (Tuesday-Monday)
+  const isCurrentNFLWeek = (week: number): boolean => {
+    if (!currentWeek) return false;
     
-    setRefreshingOdds(true);
-    try {
-      // Only refresh for current week and only unstarted games
-      const gamesToRefresh = games.filter(game => game.status === 'scheduled');
-      
-      if (gamesToRefresh.length === 0) {
-        return;
-      }
-      
-      // Clear cache for this week to force fresh API call
-      const { apiCache } = await import('@/lib/apiCache');
-      apiCache.clear(); // Clear all cache
-      
-      let odds = await oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek });
-      
-      // Filter to only unstarted games for the current week
-      const unstartedGameIds = gamesToRefresh.map(g => g.gameId);
-      const weekPattern = `2025-W${selectedWeek.toString().padStart(2, '0')}`;
-      const relevantOdds = odds.filter(odd => 
-        unstartedGameIds.includes(odd.gameId) && odd.gameId.includes(weekPattern)
-      );
-      
-      if (relevantOdds.length === 0) {
-        return;
-      }
-      
-      // Update only unstarted games with new odds
-      const updatedGames = games.map(game => {
-        if (game.status !== 'scheduled') {
-          return game; // Don't update finished/live games
-        }
-        
-        const gameOdds = relevantOdds.find(odd => odd.gameId === game.gameId);
-        if (!gameOdds) {
-          return game; // No new odds for this game
-        }
-        
-        return {
-          ...game,
-          spreadHome: gameOdds.spreadHome,
-          spreadAway: gameOdds.spreadAway,
-          sportsbook: {
-            spreadHome: gameOdds.spreadHome,
-            spreadAway: gameOdds.spreadAway,
-            total: gameOdds.total,
-            provider: gameOdds.provider
-          }
-        };
-      });
-      
-      setGames(updatedGames);
-      
-    } catch (error) {
-      console.error('❌ Failed to refresh odds:', error);
-    } finally {
-      setRefreshingOdds(false);
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // NFL week runs Tuesday (2) to Monday (1)
+    // If it's Tuesday-Sunday, we're in the current week
+    // If it's Monday, we're still in the previous week until games start
+    if (dayOfWeek >= 2) { // Tuesday-Sunday
+      return week === currentWeek.week;
+    } else if (dayOfWeek === 1) { // Monday
+      // On Monday, we're still in the current week until late afternoon
+      // For simplicity, consider Monday as current week
+      return week === currentWeek.week;
+    } else { // Sunday
+      // On Sunday, we're in the current week
+      return week === currentWeek.week;
     }
   };
+
 
   // Get current week
   useEffect(() => {
@@ -124,49 +86,45 @@ export const NFLScoreboard = () => {
 
     const fetchData = async () => {
       try {
-        // Fetch schedule
-        const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
+        // Check if week has any odds stored
+        const weekDoc = await oddsService.getWeekDoc(2025, selectedWeek);
         
-        // Start with mock odds data
-        // Load mock odds data
-        const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
-        const mockProvider = new MockOddsProvider();
-        let odds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
-        
-        // Try to get real odds for unstarted games
-        const scheduledGames = schedule.filter(game => game.status === 'scheduled');
-        if (scheduledGames.length > 0) {
+        // If no odds stored, bootstrap them
+        if (!weekDoc?.hasAnyOdds) {
           try {
-            const { apiCache } = await import('@/lib/apiCache');
-            const cacheKey = `odds-2025-${selectedWeek}`;
-            let realOdds = apiCache.get(cacheKey);
-            
-            if (!realOdds) {
-              realOdds = await oddsProvider.getWeekOdds({ season: 2025, week: selectedWeek });
-              apiCache.set(cacheKey, realOdds, 5 * 60 * 1000);
-            }
-            
-            const weekPattern = `2025-W${selectedWeek.toString().padStart(2, '0')}`;
-            const matchingRealOdds = realOdds.filter(odd => 
-              scheduledGames.some(game => game.gameId === odd.gameId) && odd.gameId.includes(weekPattern)
-            );
-            
-            if (matchingRealOdds.length > 0) {
-              odds = [...odds, ...matchingRealOdds];
-            }
+            await oddsService.refreshOdds({
+              season: 2025,
+              week: selectedWeek,
+              mode: 'bootstrap'
+            });
           } catch (error) {
-            // Fallback to mock data
+            console.warn('Bootstrap failed (Netlify functions not running locally), using mock data:', error);
+            // In local dev, just continue with mock data
           }
         }
 
+        // Fetch schedule
+        const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
+        
+        // Get odds from Firestore
+        const oddsMap = await oddsService.getOddsForWeek(2025, selectedWeek);
+        
+        // Load mock odds as fallback
+        const { MockOddsProvider } = await import('@/providers/mock/MockOddsProvider');
+        const mockProvider = new MockOddsProvider();
+        const mockOdds = await mockProvider.getWeekOdds({ season: 2025, week: selectedWeek });
+
         // Merge schedule, odds, and scores data
         const scores = await scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) });
-        // Data successfully loaded from APIs
         
         const gamesData = schedule.map(game => {
-          const gameOdds = odds.find(odd => odd.gameId === game.gameId);
+          // Try to get real odds first, fallback to mock
+          const realOdds = oddsMap.get(game.gameId);
+          const mockOddsForGame = mockOdds.find(odd => odd.gameId === game.gameId);
+          const gameOdds = realOdds ? oddsService.transformOddsToGameData(realOdds) : mockOddsForGame;
+          
           const gameScore = scores.find(score => score.gameId === game.gameId);
-          // Merge game data with odds and scores, preserving the original status
+          
           return {
             ...game,
             spreadHome: gameOdds?.spreadHome || game.spreadHome || 0,
@@ -176,10 +134,10 @@ export const NFLScoreboard = () => {
               spreadHome: gameOdds.spreadHome,
               spreadAway: gameOdds.spreadAway,
               total: gameOdds.total,
-              provider: gameOdds.provider
+              provider: gameOdds.provider || 'Mock Odds Provider'
             } : game.sportsbook,
             ...gameScore,
-            status: gameScore?.status || game.status // Use score status if available, otherwise use schedule status
+            status: gameScore?.status || game.status
           };
         });
 
@@ -202,8 +160,6 @@ export const NFLScoreboard = () => {
         const unstartedGamesCount = gamesData.filter(game => game.status === 'scheduled').length;
         const hasUnstartedGames = unstartedGamesCount > 0;
         setCanRefreshOdds(hasUnstartedGames);
-        
-        // Refresh button state determined
         
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -302,18 +258,17 @@ export const NFLScoreboard = () => {
               onWeekChange={setSelectedWeek}
               availableWeeks={availableWeeks}
             />
-            <button
-              onClick={refreshOdds}
-              disabled={refreshingOdds || !canRefreshOdds}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${
-                canRefreshOdds && !refreshingOdds
-                  ? 'bg-card text-card-foreground border-border hover:bg-accent hover:text-accent-foreground shadow-sm'
-                  : 'bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-50'
-              }`}
-              title={!canRefreshOdds ? 'No unstarted games to refresh odds for' : 'Refresh odds for unstarted games'}
-            >
-              {refreshingOdds ? 'Refreshing...' : canRefreshOdds ? 'Refresh Odds' : 'All Games Finished'}
-            </button>
+            <OddsRefreshButton
+              season={2025}
+              week={selectedWeek}
+              isCurrentWeek={isCurrentNFLWeek(selectedWeek)}
+              hasUnstartedGames={canRefreshOdds}
+              onRefreshComplete={(response) => {
+                console.log('Odds refresh completed:', response);
+                // Refresh the games data to show updated odds
+                fetchData();
+              }}
+            />
           </div>
         </div>
 

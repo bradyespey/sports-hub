@@ -95,3 +95,13 @@ export interface FantasyLeague {
   name: string;
   season: number;
 }
+
+// Re-export odds types
+export type { 
+  GameDoc, 
+  OddsDoc, 
+  WeekDoc, 
+  UsageDoc, 
+  OddsRefreshRequest, 
+  OddsRefreshResponse 
+} from './odds';

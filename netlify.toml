@@ -1,0 +1,18 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+  functions = "netlify/functions"
+
+[dev]
+  targetPort = 8082
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Note: Scheduled functions would be configured here in production
+# For now, we'll use manual refresh and daily refresh via external cron
