@@ -5,11 +5,22 @@ import * as admin from "firebase-admin";
 let app: admin.app.App | null = null;
 function getDb() {
   if (!app) {
+    // Handle Firebase private key formatting for different environments
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
+    
+    // Replace literal \n strings with actual newlines
+    privateKey = privateKey.replace(/\\n/g, "\n");
+    
+    // Ensure proper formatting with begin/end markers
+    if (!privateKey.includes("-----BEGIN PRIVATE KEY-----")) {
+      throw new Error("Invalid Firebase private key format");
+    }
+
     app = admin.initializeApp({
       credential: admin.credential.cert({
         project_id: process.env.FIREBASE_PROJECT_ID,
         client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+        private_key: privateKey,
       }),
     });
   }
