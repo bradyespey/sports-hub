@@ -32,6 +32,7 @@ export const NFLIndex = () => {
                 <p>• Picks auto-save when selected</p>
                 <p>• Change picks until kickoff</p>
                 <p>• Reveals after both players pick + kickoff</p>
+                <p>• Odds update daily + manual refresh available</p>
               </div>
               <Button asChild className="w-full">
                 <Link to="/nfl/scoreboard">View Scoreboard</Link>

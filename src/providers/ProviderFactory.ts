@@ -1,10 +1,14 @@
 // src/providers/ProviderFactory.ts
 import { OddsProvider, ScoresProvider, LogosProvider } from './interfaces';
+import { TeamsProvider } from './TeamsProvider';
+import { DepthChartProvider } from './DepthChartProvider';
 import { HttpOddsProvider } from './http/HttpOddsProvider';
 import { HttpScoresProvider } from './http/HttpScoresProvider';
 import { HttpLogosProvider } from './http/HttpLogosProvider';
 import { TheOddsApiProvider } from './http/TheOddsApiProvider';
 import { EspnScoresProvider } from './http/EspnScoresProvider';
+import { EspnTeamsProvider } from './http/EspnTeamsProvider';
+import { EspnDepthChartProvider } from './http/EspnDepthChartProvider';
 
 export class ProviderFactory {
   static createOddsProvider(): OddsProvider {
@@ -21,5 +25,13 @@ export class ProviderFactory {
 
   static createLogosProvider(): LogosProvider {
     return new HttpLogosProvider();
+  }
+
+  static createTeamsProvider(): TeamsProvider {
+    return new EspnTeamsProvider();
+  }
+
+  static createDepthChartProvider(): DepthChartProvider {
+    return new EspnDepthChartProvider();
   }
 }

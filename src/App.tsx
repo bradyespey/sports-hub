@@ -9,6 +9,7 @@ import { CurrentWeek } from "@/pages/CurrentWeek";
 import { NFLIndex } from "@/pages/NFL/Index";
 import { NFLScoreboard } from "@/pages/NFL/Scoreboard";
 import { NFLTeams } from "@/pages/NFL/Teams";
+import { NFLTeamDetail } from "@/pages/NFL/TeamDetail";
 import { NFLStandings } from "@/pages/NFL/Standings";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/nfl" element={<NFLIndex />} />
               <Route path="/nfl/scoreboard" element={<NFLScoreboard />} />
               <Route path="/nfl/teams" element={<NFLTeams />} />
+              <Route path="/nfl/teams/:teamId" element={<NFLTeamDetail />} />
               <Route path="/nfl/schedule" element={<NFLScoreboard />} /> {/* Same as scoreboard for now */}
               <Route path="/nfl/standings" element={<NFLStandings />} />
               

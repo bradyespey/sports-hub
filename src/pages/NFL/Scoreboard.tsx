@@ -251,9 +251,17 @@ export const NFLScoreboard = () => {
                 {showPickRules && (
                   <div className="text-sm text-muted-foreground space-y-1 mt-3">
                     <p>• <strong>Make your picks:</strong> Click "Pick" next to your chosen team for each game</p>
+                    <p>• <strong>Research teams:</strong> Click on any team name to view their depth chart and roster</p>
                     <p>• <strong>Change anytime:</strong> You can modify picks up until kickoff for each game</p>
                     <p>• <strong>Strategic reveals:</strong> Picks are only revealed after both players submit AND kickoff occurs</p>
                     <p>• <strong>Auto-save:</strong> Picks save automatically when you select them</p>
+                    <div className="mt-3 pt-3 border-t border-muted">
+                      <p className="font-medium text-foreground mb-2">📊 Betting Odds</p>
+                      <p>• <strong>Daily updates:</strong> Odds refresh automatically once per day</p>
+                      <p>• <strong>Manual refresh:</strong> Use "Update Odds" button for latest lines anytime</p>
+                      <p>• <strong>API limits:</strong> 500 free requests/month, so manual updates are limited</p>
+                      <p>• <strong>Last updated:</strong> Check timestamp next to the refresh button</p>
+                    </div>
                   </div>
                 )}
               </div>

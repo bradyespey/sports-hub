@@ -1,10 +1,11 @@
 // src/components/GameCard.tsx
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Game, Pick } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Trophy } from 'lucide-react';
+import { Clock, Trophy, ExternalLink } from 'lucide-react';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { getTeamName } from '@/lib/teamNames';
 import dayjs, { LOCAL_TIMEZONE } from '@/lib/dayjs';
@@ -123,6 +124,47 @@ export const GameCard = ({
     return "text-blue-600";
   };
 
+  // Helper function to get team abbreviation for URL
+  const getTeamAbbreviation = (teamName: string): string => {
+    // Map from short team names (like "Chargers") to URL abbreviations
+    const teamAbbreviations: Record<string, string> = {
+      'Cardinals': 'ari',
+      'Falcons': 'atl',
+      'Ravens': 'bal',
+      'Bills': 'buf',
+      'Panthers': 'car',
+      'Bears': 'chi',
+      'Bengals': 'cin',
+      'Browns': 'cle',
+      'Cowboys': 'dal',
+      'Broncos': 'den',
+      'Lions': 'det',
+      'Packers': 'gb',
+      'Texans': 'hou',
+      'Colts': 'ind',
+      'Jaguars': 'jax',
+      'Chiefs': 'kc',
+      'Raiders': 'lv',
+      'Chargers': 'lac',
+      'Rams': 'lar',
+      'Dolphins': 'mia',
+      'Vikings': 'min',
+      'Patriots': 'ne',
+      'Saints': 'no',
+      'Giants': 'nyg',
+      'Jets': 'nyj',
+      'Eagles': 'phi',
+      'Steelers': 'pit',
+      '49ers': 'sf',
+      'Seahawks': 'sea',
+      'Buccaneers': 'tb',
+      'Titans': 'ten',
+      'Commanders': 'was'
+    };
+    
+    return teamAbbreviations[teamName] || teamName.toLowerCase().replace(/\s+/g, '-');
+  };
+
   return (
     <Card className="game-card hover:shadow-md transition-shadow">
       <CardContent className="p-3 sm:p-4">
@@ -138,9 +180,14 @@ export const GameCard = ({
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${game.awayTeam}&size=24&background=f3f4f6&color=374151`;
                 }}
               />
-              <span className={`font-semibold text-sm sm:text-base ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
-                {getTeamName(game.awayTeam)}
-              </span>
+              <Link 
+                to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.awayTeam))}`}
+                className={`font-semibold text-sm sm:text-base hover:underline flex items-center space-x-1 group ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}
+                title="View team depth chart"
+              >
+                <span>{getTeamName(game.awayTeam)}</span>
+                <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+              </Link>
               {(isLive || isFinal) && game.awayScore !== undefined && (
                 <div className="flex items-center space-x-1">
                   <span className={`text-lg font-bold ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -190,9 +237,14 @@ export const GameCard = ({
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${game.homeTeam}&size=24&background=f3f4f6&color=374151`;
                 }}
               />
-              <span className={`font-semibold text-sm sm:text-base ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
-                {getTeamName(game.homeTeam)}
-              </span>
+              <Link 
+                to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.homeTeam))}`}
+                className={`font-semibold text-sm sm:text-base hover:underline flex items-center space-x-1 group ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}
+                title="View team depth chart"
+              >
+                <span>{getTeamName(game.homeTeam)}</span>
+                <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+              </Link>
               {(isLive || isFinal) && game.homeScore !== undefined && (
                 <div className="flex items-center space-x-1">
                   <span className={`text-lg font-bold ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -236,7 +288,25 @@ export const GameCard = ({
          <div className="text-xs text-muted-foreground">
            {game.spreadHome !== undefined && game.spreadHome !== 0 ? (
              <span>
-               {game.spreadHome < 0 ? getTeamName(game.homeTeam) : getTeamName(game.awayTeam)} {game.spreadHome < 0 ? game.spreadHome : -game.spreadHome}
+               {game.spreadHome < 0 ? (
+                 <Link 
+                   to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.homeTeam))}`}
+                   className="hover:underline flex items-center space-x-1 group"
+                   title="View team depth chart"
+                 >
+                   <span>{getTeamName(game.homeTeam)}</span>
+                   <ExternalLink className="h-2 w-2 opacity-50 group-hover:opacity-100 transition-opacity" />
+                 </Link>
+               ) : (
+                 <Link 
+                   to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.awayTeam))}`}
+                   className="hover:underline flex items-center space-x-1 group"
+                   title="View team depth chart"
+                 >
+                   <span>{getTeamName(game.awayTeam)}</span>
+                   <ExternalLink className="h-2 w-2 opacity-50 group-hover:opacity-100 transition-opacity" />
+                 </Link>
+               )} {game.spreadHome < 0 ? game.spreadHome : -game.spreadHome}
                {game.network && ` TV: ${game.network}`}
              </span>
            ) : game.network ? (

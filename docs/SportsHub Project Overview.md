@@ -128,6 +128,8 @@ npm run dev
 - **Game Sorting**: Yahoo-style organization (Live, Upcoming, Finished)
 - **Real Data Integration**: Live scores and odds from external APIs
 - **Theme Support**: Light/dark/system theme with persistent user preference
+- **User Guidance**: Built-in help system explaining pick rules and odds management
+- **Smart Odds Updates**: Daily automatic updates with manual refresh and API limit awareness
 
 ## Current Status
 
@@ -184,6 +186,14 @@ npm run dev
 - **Consistent Odds Display**: Always shows favored team with negative spread for clarity
 - **Smart Pick Reveals**: Picks only revealed after kickoff AND both players submit
 - **Mobile-Optimized Pick Buttons**: Larger touch targets and responsive design
+- **User-Friendly Info System**: Collapsible pick rules and odds information in UI
+- **Clear Odds Management**: Daily auto-updates with manual refresh capability and API limit awareness
+- **Enhanced Teams Page**: Real-time team data from ESPN with logos, divisions, and links
+- **Team Depth Charts**: Complete depth chart integration showing QB1, QB2, etc. for all positions
+- **Team Detail Pages**: Individual team pages with offense, defense, and special teams depth charts
+- **ESPN-Style Ordering**: Depth charts display in exact ESPN order (QB, RB, WR, WR, WR, TE, etc.)
+- **Position Glossary**: Complete position abbreviation glossary matching ESPN's format
+- **Clickable Team Links**: All team names in scoreboard and teams page link to team detail pages for informed picking
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -241,6 +251,11 @@ npm run dev
 **Solution**: Implemented auto-save with immediate visual feedback, removed bottom bar, added top save button, fixed odds to always show favored team, corrected reveal logic to require both kickoff AND both players picking
 **Status**: Resolved
 
+### 10. User Onboarding and Information Clarity
+**Problem**: Users logging in didn't understand pick system rules, odds refresh limitations, or how the competitive elements worked
+**Solution**: Added collapsible info section on scoreboard with detailed pick rules and odds management explanation, quick summary on NFL index page, clear visual separation of different information types
+**Status**: Resolved
+
 ## Next Steps
 
 ### Immediate (Next Session)
@@ -293,10 +308,12 @@ npm run dev
 - **Capabilities**: Real-time NFL betting spreads with comprehensive team matching
 
 ### ESPN API
-- **Endpoint**: `/apis/site/v2/sports/football/nfl/scoreboard`
-- **Authentication**: None required
-- **Caching**: 30 minutes for schedule, 30 seconds for live scores
-- **Capabilities**: Live game scores, schedules, team logos
+- **Scoreboard Endpoint**: `/apis/site/v2/sports/football/nfl/scoreboard`
+- **Teams Endpoint**: `/apis/site/v2/sports/football/nfl/teams`
+- **Depth Chart Endpoint**: `/v2/sports/football/leagues/nfl/seasons/{year}/teams/{teamId}/depthcharts`
+- **Authentication**: None required (free public APIs)
+- **Caching**: 30 minutes for schedule, 30 seconds for live scores, 24 hours for teams, 1 hour for depth charts
+- **Capabilities**: Live game scores, schedules, team logos, complete roster depth charts
 
 ## Data Sources
 
