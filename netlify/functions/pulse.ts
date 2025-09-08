@@ -8,6 +8,9 @@ function getDb() {
     // Handle Firebase private key formatting for different environments
     let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
     
+    // Remove surrounding quotes if present
+    privateKey = privateKey.replace(/^["']|["']$/g, "");
+    
     // Replace literal \n strings with actual newlines
     privateKey = privateKey.replace(/\\n/g, "\n");
     
