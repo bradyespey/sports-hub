@@ -1,0 +1,18 @@
+name: Daily Odds Refresh
+
+on:
+  schedule:
+    # Run at 2 AM Chicago time (8 AM UTC during standard time, 7 AM UTC during daylight time)
+    # This runs at 8 AM UTC which is 2 AM CST / 3 AM CDT
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  refresh-odds:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Daily Odds Function
+        run: |
+          curl -X POST https://sportshub.theespeys.com/.netlify/functions/daily_odds \
+            -H "Content-Type: application/json" \
+            -w "\nStatus: %{http_code}\n"
