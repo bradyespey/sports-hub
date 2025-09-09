@@ -12,7 +12,6 @@ export const handler: Handler = async (event, context) => {
 
     const currentHour = parseInt(chicagoTime);
     
-    console.log(`Schedule check: Chicago time hour=${currentHour}`);
 
     // Only run at 11:00 America/Chicago
     if (currentHour !== 11) {

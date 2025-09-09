@@ -11,9 +11,8 @@ export const handler: ScheduledHandler = async (event) => {
   // Compute local time in America/Chicago
   const now = dayjs().tz("America/Chicago");
 
-  // Run only at 2 AM local time (temporarily disabled for testing)
-  if (now.hour() !== 2 && now.hour() !== 21) { // Allow testing at 9 PM too
-    console.log(`Skipping - not 2 AM local, current hour: ${now.hour()}`);
+  // Run only at 2 AM local time
+  if (now.hour() !== 2) {
     return { 
       statusCode: 200, 
       body: `skip (not 2 AM local, current hour: ${now.hour()})` 
@@ -42,7 +41,6 @@ export const handler: ScheduledHandler = async (event) => {
       };
     }
 
-    console.log(`Daily odds refresh successful at ${now.format('YYYY-MM-DD HH:mm:ss')} America/Chicago: ${text}`);
     return { 
       statusCode: 200, 
       body: `ok: ${text}` 

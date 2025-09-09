@@ -203,6 +203,8 @@ npm run dev
 - **Current Week Button**: Added "Current Week" button when viewing past/future weeks for quick navigation
 - **Daily Odds Automation**: Created scheduled function to automatically refresh odds at 2 AM Chicago time
 - **Development Workflow**: Fixed local development to use production functions endpoint for reliability
+- **Mobile UI Improvements**: Fixed odds refresh section overflow and centered week selector on mobile
+- **GitHub Actions Scheduling**: Implemented automated daily odds refresh using GitHub Actions workflow
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -275,12 +277,16 @@ npm run dev
 **Solution**: Created `daily_odds.ts` scheduled function with timezone handling, modified local development to use production function endpoint for reliability, updated netlify.toml configuration
 **Status**: Resolved
 
+### 13. Mobile UI and GitHub Actions Scheduling
+**Problem**: Mobile UI had horizontal scrolling issues with odds refresh section, week selector not centered, needed reliable scheduling solution
+**Solution**: Implemented responsive design for odds refresh section, centered week selector on mobile, created GitHub Actions workflow for daily scheduling, cleaned up debug logging
+**Status**: Resolved
+
 ## Next Steps
 
 ### Immediate (Next Session)
-1. **Production Deployment**: Configure scheduled function in Netlify dashboard
-2. **Mobile Testing**: Test and optimize mobile experience
-3. **Error Handling**: Add comprehensive error handling for API failures
+1. **Mobile Testing**: Test and optimize mobile experience
+2. **Error Handling**: Add comprehensive error handling for API failures
 
 ### Short Term
 1. **Fantasy Integration**: Add Sleeper fantasy widget showing Brady vs Jenny matchup
