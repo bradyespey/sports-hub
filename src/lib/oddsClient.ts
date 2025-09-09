@@ -10,9 +10,9 @@ export interface OddsRefreshResult {
 }
 
 export async function refreshOddsNow(season: number, week: number): Promise<OddsRefreshResult> {
-  // Use localhost:8888 for development, relative path for production
+  // For development, try production URL as fallback since local Netlify dev can be complex
   const functionsUrl = import.meta.env.DEV 
-    ? "http://localhost:8888/.netlify/functions/odds_refresh"
+    ? "https://sportshub.theespeys.com/.netlify/functions/odds_refresh"
     : "/.netlify/functions/odds_refresh";
     
   const res = await fetch(functionsUrl, {

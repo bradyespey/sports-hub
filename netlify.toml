@@ -9,10 +9,12 @@
   node_bundler = "esbuild"
   directory = "netlify/functions"
 
+# Run daily_odds hourly in UTC. daily_odds itself checks local time for 2 AM.
+# Note: Scheduled functions are configured in Netlify dashboard for production
+# [scheduled.functions."daily_odds"]
+#   cron = "0 * * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Note: Scheduled functions would be configured here in production
-# For now, we'll use manual refresh and daily refresh via external cron

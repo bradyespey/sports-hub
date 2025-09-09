@@ -201,6 +201,8 @@ npm run dev
 - **Loading State Management**: Fixed flash of "Please Sign In" page during navigation with proper loading states
 - **Standings Bug Fix**: Fixed duplicate Jenny entries in standings display
 - **Current Week Button**: Added "Current Week" button when viewing past/future weeks for quick navigation
+- **Daily Odds Automation**: Created scheduled function to automatically refresh odds at 2 AM Chicago time
+- **Development Workflow**: Fixed local development to use production functions endpoint for reliability
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -268,10 +270,15 @@ npm run dev
 **Solution**: Implemented proper Tuesday-Monday week logic, fixed standings duplicate bug, added loading states to prevent auth flash, made header clickable, added picks counter, and improved Scores navigation to always reset to current week
 **Status**: Resolved
 
+### 12. Daily Odds Automation and Local Development
+**Problem**: Need automated daily odds refresh at 2 AM Chicago time, local development broken due to Netlify function connection issues
+**Solution**: Created `daily_odds.ts` scheduled function with timezone handling, modified local development to use production function endpoint for reliability, updated netlify.toml configuration
+**Status**: Resolved
+
 ## Next Steps
 
 ### Immediate (Next Session)
-1. **Live Data Sync**: Implement real-time score updates during games
+1. **Production Deployment**: Configure scheduled function in Netlify dashboard
 2. **Mobile Testing**: Test and optimize mobile experience
 3. **Error Handling**: Add comprehensive error handling for API failures
 
