@@ -1,4 +1,4 @@
-import type { Handler } from "@netlify/functions";
+import type { Handler, ScheduledHandler } from "@netlify/functions";
 import fetch from "node-fetch";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -7,7 +7,7 @@ import tz from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(tz);
 
-export const handler: Handler = async () => {
+export const handler: ScheduledHandler = async (event) => {
   // Compute local time in America/Chicago
   const now = dayjs().tz("America/Chicago");
 
@@ -54,6 +54,11 @@ export const handler: Handler = async () => {
       body: `Error calling odds_refresh: ${error}` 
     };
   }
+};
+
+// Schedule configuration for Netlify Scheduled Functions
+export const config = {
+  schedule: "0 * * * *" // Run every hour (function checks for 2 AM Chicago time)
 };
 
 export default handler;
