@@ -13,57 +13,41 @@ import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { OddsRefreshButton } from '@/components/OddsRefreshButton';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
+import { getCurrentNFLWeek, isCurrentNFLWeek } from '@/lib/dayjs';
 import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 export const NFLScoreboard = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [currentWeek, setCurrentWeek] = useState<Week | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
-  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
   const [showPickRules, setShowPickRules] = useState(false);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
 
-  // Check if a week is the current NFL week (Tuesday-Monday)
-  const isCurrentNFLWeek = (week: number): boolean => {
-    if (!currentWeek) return false;
-    
-    // For now, just check if it's the current week from our data
-    // In production, this would be more sophisticated
-    return week === currentWeek.week;
-  };
 
-
-  // Get current week
+  // Get current week - always use calculated current week
   useEffect(() => {
-    const fetchCurrentWeek = async () => {
-      const weeksRef = collection(db, 'weeks');
-      const weeksSnapshot = await getDocs(weeksRef);
-      const now = new Date();
-      
-      const weeks = weeksSnapshot.docs.map(doc => ({
-        ...doc.data(),
-        startDateUtc: doc.data().startDateUtc.toDate(),
-        endDateUtc: doc.data().endDateUtc.toDate()
-      })) as Week[];
-
-      const current = weeks.find(week => 
-        now >= week.startDateUtc && now <= week.endDateUtc
-      );
-
-      if (current) {
-        setCurrentWeek(current);
-        setSelectedWeek(current.week);
-      } else {
-        const fallbackWeek = { season: 2025, week: 1, startDateUtc: new Date('2025-09-04'), endDateUtc: new Date('2025-09-10') };
-        setCurrentWeek(fallbackWeek);
-        setSelectedWeek(1);
-      }
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
+    
+    // Set current week object for compatibility
+    const currentWeekObj: Week = {
+      season: 2025,
+      week: currentWeekNumber,
+      startDateUtc: new Date(), // Will be calculated properly in real implementation
+      endDateUtc: new Date()
     };
-    fetchCurrentWeek();
+    setCurrentWeek(currentWeekObj);
+  }, []);
+
+  // Reset to current week when component mounts (when navigating to Scores)
+  useEffect(() => {
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
   }, []);
 
   // Fetch games and picks when selected week changes
@@ -180,6 +164,49 @@ export const NFLScoreboard = () => {
     return bothPicked && gameStarted;
   };
 
+  const getOpponentId = () => {
+    // Jenny's UID: SAMXEs1HopNiPK62qpZnP29SITz2
+    // Brady's UID: mrm4SKisEqM4hWcqet5lf9irnbB3
+    const jennyUid = 'SAMXEs1HopNiPK62qpZnP29SITz2';
+    const bradyUid = 'mrm4SKisEqM4hWcqet5lf9irnbB3';
+    
+    // Return the opposite of whoever is currently logged in
+    return user?.uid === jennyUid ? bradyUid : jennyUid;
+  };
+
+  const getOpponentName = () => {
+    const jennyUid = 'SAMXEs1HopNiPK62qpZnP29SITz2';
+    return user?.uid === jennyUid ? 'Brady' : 'Jenny';
+  };
+
+  // Calculate picks counts
+  const getUserPickCount = (userId: string) => {
+    return Object.values(picks).filter(pick => pick.uid === userId).length;
+  };
+
+  const userPickCount = getUserPickCount(user?.uid || '');
+  const opponentPickCount = getUserPickCount(getOpponentId());
+  const totalGames = games.length;
+
+  // Reset to current week function
+  const resetToCurrentWeek = () => {
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -200,31 +227,64 @@ export const NFLScoreboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <NFLNavigation />
+      <NFLNavigation onScoresClick={resetToCurrentWeek} />
       <div className="container mx-auto px-4 py-4 space-y-4">
         {/* Week Selector */}
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
-          <div className="flex items-center justify-between">
-            <WeekSelector
-              currentWeek={selectedWeek}
-              onWeekChange={setSelectedWeek}
-              availableWeeks={availableWeeks}
-            />
-            <div className="flex items-center space-x-3">
-              {Object.keys(pendingPicks).length > 0 && (
-                <Button 
-                  onClick={submitPicks}
-                  variant="outline"
-                  size="sm"
-                  className="text-sm"
-                >
-                  Save {Object.keys(pendingPicks).length} Pick{Object.keys(pendingPicks).length !== 1 ? 's' : ''}
-                </Button>
-              )}
-              <OddsRefreshButton
-                season={2025}
-                week={selectedWeek}
-              />
+          <div className="flex flex-col space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <WeekSelector
+                  currentWeek={selectedWeek}
+                  onWeekChange={setSelectedWeek}
+                  availableWeeks={availableWeeks}
+                />
+                {!isCurrentNFLWeek(selectedWeek) && (
+                  <Button 
+                    onClick={resetToCurrentWeek}
+                    variant="outline"
+                    size="sm"
+                    className="text-sm"
+                  >
+                    Current Week
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center space-x-3">
+                {Object.keys(pendingPicks).length > 0 && (
+                  <Button 
+                    onClick={submitPicks}
+                    variant="outline"
+                    size="sm"
+                    className="text-sm"
+                  >
+                    Save {Object.keys(pendingPicks).length} Pick{Object.keys(pendingPicks).length !== 1 ? 's' : ''}
+                  </Button>
+                )}
+                <OddsRefreshButton
+                  season={2025}
+                  week={selectedWeek}
+                />
+              </div>
+            </div>
+            
+            {/* Picks Counter */}
+            <div className="flex items-center justify-center space-x-6 text-sm">
+              <div className="flex items-center space-x-2">
+                <span className="font-medium text-foreground">You:</span>
+                <span className={`font-bold ${userPickCount === totalGames ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  {userPickCount}/{totalGames}
+                </span>
+                <span className="text-muted-foreground">picks</span>
+              </div>
+              <div className="w-px h-4 bg-border"></div>
+              <div className="flex items-center space-x-2">
+                <span className="font-medium text-foreground">{getOpponentName()}:</span>
+                <span className={`font-bold ${opponentPickCount === totalGames ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  {opponentPickCount}/{totalGames}
+                </span>
+                <span className="text-muted-foreground">picks</span>
+              </div>
             </div>
           </div>
         </div>

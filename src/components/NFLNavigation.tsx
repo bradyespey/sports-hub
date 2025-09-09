@@ -1,12 +1,29 @@
 // src/components/NFLNavigation.tsx
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { getCurrentNFLWeek } from '@/lib/dayjs';
 
-export const NFLNavigation = () => {
+interface NFLNavigationProps {
+  onScoresClick?: () => void;
+}
+
+export const NFLNavigation = ({ onScoresClick }: NFLNavigationProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleScoresClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Always navigate to current week when clicking Scores
+    if (location.pathname === '/nfl/scoreboard') {
+      // If already on scores page, call the reset function
+      onScoresClick?.();
+    } else {
+      navigate('/nfl/scoreboard');
+    }
+  };
 
   const navItems = [
-    { label: 'SCORES', path: '/nfl/scoreboard' },
+    { label: 'SCORES', path: '/nfl/scoreboard', onClick: handleScoresClick },
     { label: 'STANDINGS', path: '/nfl/standings' },
     { label: 'TEAMS', path: '/nfl/teams' },
   ];
@@ -19,6 +36,7 @@ export const NFLNavigation = () => {
             <Link
               key={item.path}
               to={item.path}
+              onClick={item.onClick}
               className={cn(
                 "py-4 px-2 text-sm font-semibold border-b-2 transition-colors",
                 location.pathname === item.path

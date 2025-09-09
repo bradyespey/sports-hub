@@ -13,7 +13,7 @@ import { ProviderFactory } from '@/providers/ProviderFactory';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 
 export const NFLStandings = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [currentWeek, setCurrentWeek] = useState<Week | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
@@ -126,6 +126,19 @@ export const NFLStandings = () => {
     const jennyUid = 'SAMXEs1HopNiPK62qpZnP29SITz2';
     return user?.uid === jennyUid ? 'Brady' : 'Jenny';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

@@ -194,6 +194,13 @@ npm run dev
 - **ESPN-Style Ordering**: Depth charts display in exact ESPN order (QB, RB, WR, WR, WR, TE, etc.)
 - **Position Glossary**: Complete position abbreviation glossary matching ESPN's format
 - **Clickable Team Links**: All team names in scoreboard and teams page link to team detail pages for informed picking
+- **Header Navigation**: Logo and title are clickable links to home page for better UX
+- **Picks Counter**: Real-time display of user and opponent pick counts (e.g., "You: 8/16 picks")
+- **Tuesday-Monday Week Logic**: Proper NFL week calculation with Tuesday to Monday schedule
+- **Current Week Navigation**: Scores tab always resets to current week, even when already on Scores page
+- **Loading State Management**: Fixed flash of "Please Sign In" page during navigation with proper loading states
+- **Standings Bug Fix**: Fixed duplicate Jenny entries in standings display
+- **Current Week Button**: Added "Current Week" button when viewing past/future weeks for quick navigation
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -254,6 +261,11 @@ npm run dev
 ### 10. User Onboarding and Information Clarity
 **Problem**: Users logging in didn't understand pick system rules, odds refresh limitations, or how the competitive elements worked
 **Solution**: Added collapsible info section on scoreboard with detailed pick rules and odds management explanation, quick summary on NFL index page, clear visual separation of different information types
+**Status**: Resolved
+
+### 11. Navigation and UX Improvements
+**Problem**: Multiple UX issues including duplicate standings entries, navigation flash, missing week logic, and poor navigation flow
+**Solution**: Implemented proper Tuesday-Monday week logic, fixed standings duplicate bug, added loading states to prevent auth flash, made header clickable, added picks counter, and improved Scores navigation to always reset to current week
 **Status**: Resolved
 
 ## Next Steps
