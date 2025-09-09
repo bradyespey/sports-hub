@@ -231,8 +231,8 @@ export const NFLScoreboard = () => {
       <div className="container mx-auto px-4 py-4 space-y-4">
         {/* Week Selector */}
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
-          <div className="flex flex-col space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col space-y-3 overflow-hidden">
+            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div className="flex items-center space-x-3">
                 <WeekSelector
                   currentWeek={selectedWeek}
@@ -250,13 +250,13 @@ export const NFLScoreboard = () => {
                   </Button>
                 )}
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
                 {Object.keys(pendingPicks).length > 0 && (
                   <Button 
                     onClick={submitPicks}
                     variant="outline"
                     size="sm"
-                    className="text-sm"
+                    className="text-sm w-full sm:w-auto"
                   >
                     Save {Object.keys(pendingPicks).length} Pick{Object.keys(pendingPicks).length !== 1 ? 's' : ''}
                   </Button>
@@ -264,6 +264,7 @@ export const NFLScoreboard = () => {
                 <OddsRefreshButton
                   season={2025}
                   week={selectedWeek}
+                  className="w-full sm:w-auto"
                 />
               </div>
             </div>

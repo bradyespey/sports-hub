@@ -52,25 +52,27 @@ export function OddsRefreshButton({ season, week, className = "" }: OddsRefreshB
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <Button 
-        onClick={onClick} 
-        disabled={loading}
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-2"
-      >
-        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-        {loading ? "Updating..." : "Update Odds"}
-      </Button>
-      
-      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Clock className="h-4 w-4" />
-        <span>Last: {lastUpdated}</span>
+    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 ${className}`}>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Button 
+          onClick={onClick} 
+          disabled={loading}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? "Updating..." : "Update Odds"}
+        </Button>
+        
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Clock className="h-4 w-4" />
+          <span className="whitespace-nowrap">Last: {lastUpdated}</span>
+        </div>
       </div>
       
       {result && (
-        <div className="text-sm text-green-600">
+        <div className="text-sm text-green-600 text-center sm:text-left">
           Updated {result.updated}, Filled {result.filledPast}
           {result.remaining && ` (${result.remaining} credits left)`}
         </div>
