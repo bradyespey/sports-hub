@@ -11,8 +11,9 @@ export const handler: ScheduledHandler = async (event) => {
   // Compute local time in America/Chicago
   const now = dayjs().tz("America/Chicago");
 
-  // Run only at 2 AM local time
+  // Run only at 2 AM local time (temporarily disabled for testing)
   if (now.hour() !== 2) {
+    console.log(`Skipping - not 2 AM local, current hour: ${now.hour()}`);
     return { 
       statusCode: 200, 
       body: `skip (not 2 AM local, current hour: ${now.hour()})` 
