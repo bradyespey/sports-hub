@@ -161,12 +161,18 @@ export const CurrentWeek = () => {
   };
 
   const getOpponentId = () => {
-    // For now, return Jenny's UID - in a real app, this would be dynamic
-    return 'SAMXEs1HopNiPK62qpZnP29SITz2';
+    // Jenny's UID: SAMXEs1HopNiPK62qpZnP29SITz2
+    // Brady's UID: mrm4SKisEqM4hWcqet5lf9irnbB3
+    const jennyUid = 'SAMXEs1HopNiPK62qpZnP29SITz2';
+    const bradyUid = 'mrm4SKisEqM4hWcqet5lf9irnbB3';
+    
+    // Return the opposite of whoever is currently logged in
+    return user?.uid === jennyUid ? bradyUid : jennyUid;
   };
 
   const getOpponentName = () => {
-    return 'Jenny';
+    const jennyUid = 'SAMXEs1HopNiPK62qpZnP29SITz2';
+    return user?.uid === jennyUid ? 'Brady' : 'Jenny';
   };
 
   if (!user) {
