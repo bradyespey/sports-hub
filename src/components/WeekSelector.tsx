@@ -47,7 +47,7 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({
   };
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center justify-center sm:justify-start space-x-2 w-full sm:w-auto">
       <Button
         variant="outline"
         size="sm"

@@ -233,7 +233,7 @@ export const NFLScoreboard = () => {
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
           <div className="flex flex-col space-y-3 overflow-hidden">
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-col items-center space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
                 <WeekSelector
                   currentWeek={selectedWeek}
                   onWeekChange={setSelectedWeek}
