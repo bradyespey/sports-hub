@@ -22,8 +22,8 @@ export const handler: ScheduledHandler = async (event) => {
 
   const payload = { mode: "daily" };
 
-  // Use relative URL to call the existing odds_refresh function
-  const oddsRefreshUrl = process.env.INTERNAL_ODDS_REFRESH_URL || "/.netlify/functions/odds_refresh";
+  // Use absolute URL to call the existing odds_refresh function
+  const oddsRefreshUrl = process.env.INTERNAL_ODDS_REFRESH_URL || "https://sportshub.theespeys.com/.netlify/functions/odds_refresh";
 
   try {
     const res = await fetch(oddsRefreshUrl, {
