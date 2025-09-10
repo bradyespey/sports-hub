@@ -8,14 +8,15 @@ dayjs.extend(utc);
 dayjs.extend(tz);
 
 export const handler: ScheduledHandler = async (event) => {
-  // Compute local time in America/Chicago
-  const now = dayjs().tz("America/Chicago");
-
-  // Run only at 2 AM local time
-  if (now.hour() !== 2) {
+  // Check if we're being called at 8 AM UTC (which is 2 AM CST)
+  const nowUtc = dayjs().utc();
+  const nowCst = dayjs().tz("America/Chicago");
+  
+  // Run only at 8 AM UTC (2 AM CST) - this ensures consistent timing regardless of DST
+  if (nowUtc.hour() !== 8) {
     return { 
       statusCode: 200, 
-      body: `skip (not 2 AM local, current hour: ${now.hour()})` 
+      body: `skip (not 8 AM UTC, current UTC hour: ${nowUtc.hour()}, CST hour: ${nowCst.hour()})` 
     };
   }
 

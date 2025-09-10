@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { GameCard } from '@/components/GameCard';
 import { Standings } from '@/components/Standings';
 import { WeekSelector } from '@/components/WeekSelector';
+import { OddsRefreshButton } from '@/components/OddsRefreshButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -214,22 +215,33 @@ export const CurrentWeek = () => {
         {/* Week Selector */}
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
           <div className="flex flex-col space-y-3">
-            <div className="flex items-center space-x-3">
-              <WeekSelector
-                currentWeek={selectedWeek}
-                onWeekChange={setSelectedWeek}
-                availableWeeks={availableWeeks}
-              />
-              {!isCurrentNFLWeek(selectedWeek) && (
-                <Button 
-                  onClick={resetToCurrentWeek}
-                  variant="outline"
-                  size="sm"
-                  className="text-sm"
-                >
-                  Current Week
-                </Button>
-              )}
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center space-x-3">
+                <WeekSelector
+                  currentWeek={selectedWeek}
+                  onWeekChange={setSelectedWeek}
+                  availableWeeks={availableWeeks}
+                />
+                {!isCurrentNFLWeek(selectedWeek) && (
+                  <Button 
+                    onClick={resetToCurrentWeek}
+                    variant="outline"
+                    size="sm"
+                    className="text-sm"
+                  >
+                    Current Week
+                  </Button>
+                )}
+              </div>
+              
+              {/* Odds Refresh Button */}
+              <div className="flex justify-center">
+                <OddsRefreshButton 
+                  season={2025} 
+                  week={selectedWeek} 
+                  className="w-full sm:w-auto"
+                />
+              </div>
             </div>
             
             {/* Picks Counter */}
