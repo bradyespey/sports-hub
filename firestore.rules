@@ -1,29 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper function to check if user email is authorized
+    function isAuthorizedUser() {
+      return request.auth != null && 
+        request.auth.token.email in [
+          'baespey@gmail.com',
+          'jennycespey@gmail.com', 
+          'bradyjennytx@gmail.com'
+        ];
+    }
+    
     // Users can only access their own user document
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAuthorizedUser() && request.auth.uid == userId;
     }
     
-    // Weeks are readable by any authenticated user
+    // Weeks are readable by authorized users only
     match /weeks/{weekId} {
-      allow read: if request.auth != null;
-      allow write: if false; // Only admins should write weeks (via seed script)
+      allow read: if isAuthorizedUser();
+      allow write: if false; // Only server-side functions should write weeks
     }
     
-    // Games are readable by any authenticated user
+    // Games are readable by authorized users only  
     match /games/{gameId} {
-      allow read: if request.auth != null;
-      allow write: if false; // Only admins should write games (via seed script)
+      allow read: if isAuthorizedUser();
+      allow write: if false; // Only server-side functions should write games
     }
     
-    // Users can only access their own picks
+    // Picks can only be accessed by their owner (and only authorized users)
     match /picks/{pickId} {
-      allow read, write: if request.auth != null && 
+      allow read, write: if isAuthorizedUser() && 
         request.auth.uid == resource.data.uid;
-      allow create: if request.auth != null && 
+      allow create: if isAuthorizedUser() && 
         request.auth.uid == request.resource.data.uid;
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
