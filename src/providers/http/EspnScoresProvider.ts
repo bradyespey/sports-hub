@@ -105,7 +105,7 @@ export class EspnScoresProvider implements ScoresProvider {
         // For live scores, we'll fetch the current week's scoreboard
         // ESPN doesn't have a direct endpoint for specific game IDs, so we fetch all and filter
         const response = await fetch(
-          `${this.baseUrl}/scoreboard?seasontype=2&week=1`
+          `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`
         );
 
         if (!response.ok) {
