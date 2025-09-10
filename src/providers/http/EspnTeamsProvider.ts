@@ -118,6 +118,9 @@ export class EspnTeamsProvider implements TeamsProvider {
 
   async getTeamByAbbreviation(abbreviation: string): Promise<Team | null> {
     const teams = await this.getAllTeams();
+    
+    // Since teams are already normalized to WAS in transformESPNTeam,
+    // we can just do a direct lookup
     return teams.find(team => 
       team.abbreviation.toLowerCase() === abbreviation.toLowerCase()
     ) || null;
@@ -139,9 +142,12 @@ export class EspnTeamsProvider implements TeamsProvider {
     // Determine division based on team
     const division = this.getDivisionForTeam(team.abbreviation);
 
+    // Normalize Washington Commanders abbreviation
+    const normalizedAbbreviation = team.abbreviation === 'WSH' ? 'WAS' : team.abbreviation;
+
     return {
       id: team.id,
-      abbreviation: team.abbreviation,
+      abbreviation: normalizedAbbreviation,
       displayName: team.displayName,
       shortDisplayName: team.shortDisplayName,
       name: team.name,

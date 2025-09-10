@@ -66,11 +66,36 @@ npm run seed:week1-picks
 ✅ **Responsive grid** layout
 ✅ **Auto data sync** every 5 minutes
 
+### 5. **Standings Season Totals** ✅
+- **Issue**: Season totals not accumulating correctly across weeks
+- **Fix**: Modified standings to fetch all previous weeks' game data for cumulative calculations
+- **Result**: Week 2 shows 8/32, Week 3 shows 8/48, etc.
+
+### 6. **Firestore Query Optimization** ✅
+- **Issue**: Firestore IN query hitting 30-item limit causing errors
+- **Fix**: Removed real-time picks listener, fetch all picks at once per week change
+- **Result**: No more Firestore query limit errors
+
+### 7. **Team Navigation Highlighting** ✅
+- **Issue**: Team detail pages not showing active navigation state
+- **Fix**: Updated NFLNavigation component to handle sub-paths for team pages
+- **Result**: Blue underline shows correctly on team detail pages
+
+### 8. **Washington Commanders Team** ✅
+- **Issue**: Team "WAS" not found due to ESPN using "WSH" abbreviation
+- **Fix**: Added abbreviation normalization in EspnTeamsProvider (WSH → WAS)
+- **Result**: Washington Commanders team page now loads properly
+
+### 9. **Loading State Improvements** ✅
+- **Issue**: Flashing behavior when switching between weeks
+- **Fix**: Added loading states to prevent showing incorrect data during fetch
+- **Result**: Smooth transitions between weeks without flashing
+
 ## 🎯 Next Steps
 
-1. **Test the new layout** - should look much more compact
-2. **Add Week 1 picks** - run the seed script with real user IDs
-3. **Verify logos** - should show ESPN team logos
-4. **Check live data** - odds and scores from real APIs
+1. **Test standings** - verify season totals accumulate correctly
+2. **Test team pages** - ensure all teams load properly including Washington
+3. **Test navigation** - confirm active states work on all pages
+4. **Mobile testing** - verify responsive design works well
 
-The app should now look and feel much more like ESPN or Yahoo Sports! 🏈
+The app now has proper cumulative standings, optimized data fetching, and consistent team navigation! 🏈

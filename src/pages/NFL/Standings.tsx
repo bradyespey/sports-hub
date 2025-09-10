@@ -8,9 +8,11 @@ import { NFLNavigation } from '@/components/NFLNavigation';
 import { Standings } from '@/components/Standings';
 import { WeekSelector } from '@/components/WeekSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
+import { getCurrentNFLWeek } from '@/lib/dayjs';
 
 export const NFLStandings = () => {
   const { user, loading } = useAuth();
@@ -18,6 +20,7 @@ export const NFLStandings = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
@@ -29,11 +32,14 @@ export const NFLStandings = () => {
       const weeksSnapshot = await getDocs(weeksRef);
       const now = new Date();
       
-      const weeks = weeksSnapshot.docs.map(doc => ({
-        ...doc.data(),
-        startDateUtc: doc.data().startDateUtc.toDate(),
-        endDateUtc: doc.data().endDateUtc.toDate()
-      })) as Week[];
+      const weeks = weeksSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          startDateUtc: data.startDateUtc ? data.startDateUtc.toDate() : new Date(),
+          endDateUtc: data.endDateUtc ? data.endDateUtc.toDate() : new Date()
+        };
+      }) as Week[];
 
       const current = weeks.find(week => 
         now >= week.startDateUtc && now <= week.endDateUtc
@@ -56,6 +62,7 @@ export const NFLStandings = () => {
     if (!selectedWeek || !user) return;
 
     const fetchData = async () => {
+      setIsLoadingData(true);
       try {
         // Fetch schedule and odds for selected week
         const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
@@ -71,46 +78,62 @@ export const NFLStandings = () => {
           mergeGameWithOddsAndScores(game, oddsMap, scores)
         );
 
-        setGames(gamesData);
+        // For season totals, we need to fetch all previous weeks' game results
+        const allGamesData = [...gamesData];
+        if (selectedWeek > 1) {
+          // Fetch all previous weeks' results for season totals
+          const previousWeeksPromises = [];
+          for (let week = 1; week < selectedWeek; week++) {
+            previousWeeksPromises.push(
+              scoresProvider.getWeekSchedule({ season: 2025, week })
+                .then(async (schedule) => {
+                  const [oddsMap, scores] = await Promise.all([
+                    getCachedOddsForGames(schedule),
+                    scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) })
+                  ]);
+                  
+                  return schedule.map(game => 
+                    mergeGameWithOddsAndScores(game, oddsMap, scores)
+                  );
+                })
+            );
+          }
+          
+          const previousWeeksData = await Promise.all(previousWeeksPromises);
+          previousWeeksData.forEach(weekData => {
+            allGamesData.push(...weekData);
+          });
+        }
 
-        // Fetch picks for this week
+        setGames(allGamesData);
+
+        // Fetch ALL picks for season stats (not just this week)
         const picksRef = collection(db, 'picks');
-        const picksQuery = query(picksRef, where('gameId', 'in', gamesData.map(g => g.gameId)));
-        const picksSnapshot = await getDocs(picksQuery);
+        const allPicksSnapshot = await getDocs(picksRef);
         
         const picksData: Record<string, Pick> = {};
-        picksSnapshot.docs.forEach(doc => {
-          const pick = { ...doc.data(), createdAt: doc.data().createdAt.toDate() } as Pick;
+        allPicksSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const pick = { 
+            ...data, 
+            createdAt: data.createdAt?.toDate() || new Date() 
+          } as Pick;
           picksData[`${pick.gameId}_${pick.uid}`] = pick;
         });
         
         setPicks(picksData);
       } catch (error) {
         console.error('Error fetching data:', error);
+      } finally {
+        setIsLoadingData(false);
       }
     };
 
     fetchData();
   }, [selectedWeek, user]);
 
-  // Real-time picks updates
-  useEffect(() => {
-    if (!user || games.length === 0) return;
-
-    const picksRef = collection(db, 'picks');
-    const picksQuery = query(picksRef, where('gameId', 'in', games.map(g => g.gameId)));
-    
-    const unsubscribe = onSnapshot(picksQuery, (snapshot) => {
-      const picksData: Record<string, Pick> = {};
-      snapshot.docs.forEach(doc => {
-        const pick = { ...doc.data(), createdAt: doc.data().createdAt.toDate() } as Pick;
-        picksData[`${pick.gameId}_${pick.uid}`] = pick;
-      });
-      setPicks(picksData);
-    });
-
-    return () => unsubscribe();
-  }, [user, games]);
+  // Note: Real-time picks updates removed to avoid Firestore IN query limits
+  // Picks are fetched fresh on each week change
 
   const getOpponentId = () => {
     // Jenny's UID: SAMXEs1HopNiPK62qpZnP29SITz2
@@ -127,7 +150,7 @@ export const NFLStandings = () => {
     return user?.uid === jennyUid ? 'Brady' : 'Jenny';
   };
 
-  if (loading) {
+  if (loading || isLoadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-96">
@@ -163,11 +186,22 @@ export const NFLStandings = () => {
       <NFLNavigation />
       <div className="container mx-auto px-4 py-4 space-y-4">
         {/* Week Selector */}
-        <WeekSelector
-          currentWeek={selectedWeek}
-          onWeekChange={setSelectedWeek}
-          availableWeeks={availableWeeks}
-        />
+        <div className="flex items-center justify-center gap-4">
+          <WeekSelector
+            currentWeek={selectedWeek}
+            onWeekChange={setSelectedWeek}
+            availableWeeks={availableWeeks}
+          />
+          {selectedWeek !== getCurrentNFLWeek() && (
+            <Button
+              onClick={() => setSelectedWeek(getCurrentNFLWeek())}
+              variant="outline"
+              size="sm"
+            >
+              Current Week
+            </Button>
+          )}
+        </div>
         
         {/* Page Header */}
         <div className="text-center mb-6">
@@ -188,6 +222,7 @@ export const NFLStandings = () => {
             opponentUserId={getOpponentId() || ''}
             currentUserName={user?.displayName || 'Brady'}
             opponentUserName={getOpponentName()}
+            selectedWeek={selectedWeek}
           />
         </div>
       </div>

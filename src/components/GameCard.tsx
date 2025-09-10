@@ -49,7 +49,7 @@ export const GameCard = ({
   };
 
   const getWinner = () => {
-    if (!isFinal || !game.homeScore || !game.awayScore) return null;
+    if (!isFinal || game.homeScore === undefined || game.awayScore === undefined) return null;
     return game.homeScore > game.awayScore ? game.homeTeam : game.awayTeam;
   };
 

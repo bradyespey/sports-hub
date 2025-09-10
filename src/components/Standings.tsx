@@ -11,6 +11,7 @@ interface StandingsProps {
   opponentUserId: string;
   currentUserName?: string;
   opponentUserName?: string;
+  selectedWeek: number;
 }
 
 interface UserStats {
@@ -22,7 +23,7 @@ interface UserStats {
   seasonPercentage: number;
 }
 
-export const Standings = ({ games, picks, currentUserId, opponentUserId, currentUserName, opponentUserName }: StandingsProps) => {
+export const Standings = ({ games, picks, currentUserId, opponentUserId, currentUserName, opponentUserName, selectedWeek }: StandingsProps) => {
   const calculateUserStats = (userId: string): UserStats => {
     const userPicks = Object.values(picks).filter(pick => pick.uid === userId);
     const finalGames = games.filter(game => game.status === 'final');
@@ -47,10 +48,30 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
       }
     });
 
-    // For now, season stats are the same as weekly stats
-    // In a real app, you'd fetch all weeks of data
-    seasonCorrect = weeklyCorrect;
-    seasonTotal = weeklyTotal;
+    // Calculate season stats from all picks up to current week
+    const userAllPicks = Object.values(picks).filter(pick => pick.uid === userId);
+    
+    // Filter picks for weeks up to and including the current week
+    const seasonPicks = userAllPicks.filter(pick => {
+      const pickWeekMatch = pick.gameId.match(/W(\d+)/);
+      if (!pickWeekMatch) return false;
+      const pickWeek = parseInt(pickWeekMatch[1]);
+      return pickWeek <= selectedWeek;
+    });
+    
+    seasonTotal = seasonPicks.length;
+    seasonCorrect = 0;
+    
+    // Count correct picks across all available games (now includes previous weeks)
+    seasonPicks.forEach(pick => {
+      const game = games.find(g => g.gameId === pick.gameId);
+      if (game && game.status === 'final' && game.homeScore !== undefined && game.awayScore !== undefined) {
+        const winner = game.homeScore > game.awayScore ? game.homeTeam : game.awayTeam;
+        if (pick.selection === winner) {
+          seasonCorrect++;
+        }
+      }
+    });
 
     return {
       weeklyCorrect,

@@ -94,7 +94,11 @@ export function mergeGameWithOddsAndScores(
       total: cachedOdds.total,
       provider: cachedOdds.provider
     } : null,
+    // Merge score data but prioritize the more final status
     ...gameScore,
-    status: gameScore?.status || game.status
+    status: gameScore?.status === 'final' ? 'final' : game.status,
+    // Ensure scores are properly set from gameScore if available
+    homeScore: gameScore?.homeScore || game.homeScore,
+    awayScore: gameScore?.awayScore || game.awayScore
   };
 }

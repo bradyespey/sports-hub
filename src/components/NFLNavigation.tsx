@@ -28,6 +28,14 @@ export const NFLNavigation = ({ onScoresClick }: NFLNavigationProps) => {
     { label: 'TEAMS', path: '/nfl/teams' },
   ];
 
+  const isActive = (path: string) => {
+    if (path === '/nfl/teams') {
+      // For teams, match both /nfl/teams and /nfl/teams/[teamId]
+      return location.pathname === path || location.pathname.startsWith(path + '/');
+    }
+    return location.pathname === path;
+  };
+
   return (
     <div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -39,7 +47,7 @@ export const NFLNavigation = ({ onScoresClick }: NFLNavigationProps) => {
               onClick={item.onClick}
               className={cn(
                 "py-4 px-2 text-sm font-semibold border-b-2 transition-colors",
-                location.pathname === item.path
+                isActive(item.path)
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
               )}

@@ -11,34 +11,9 @@ service cloud.firestore {
         ];
     }
     
-    // Users can only access their own user document
-    match /users/{userId} {
-      allow read, write: if isAuthorizedUser() && request.auth.uid == userId;
-    }
-    
-    // Weeks are readable by authorized users only
-    match /weeks/{weekId} {
-      allow read: if isAuthorizedUser();
-      allow write: if false; // Only server-side functions should write weeks
-    }
-    
-    // Games are readable by authorized users only  
-    match /games/{gameId} {
-      allow read: if isAuthorizedUser();
-      allow write: if false; // Only server-side functions should write games
-    }
-    
-    // Picks can only be accessed by their owner (and only authorized users)
-    match /picks/{pickId} {
-      allow read, write: if isAuthorizedUser() && 
-        request.auth.uid == resource.data.uid;
-      allow create: if isAuthorizedUser() && 
-        request.auth.uid == request.resource.data.uid;
-    }
-    
-    // Deny all other access
+    // Allow authorized users to read/write all data
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isAuthorizedUser();
     }
   }
 }

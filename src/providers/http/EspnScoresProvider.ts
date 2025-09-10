@@ -1,6 +1,7 @@
 // src/providers/http/EspnScoresProvider.ts
 import { ScoresProvider } from '../interfaces';
 import { GameMeta, GameScore } from '@/types';
+import { getCurrentNFLWeek } from '@/lib/dayjs';
 
 // Simple cache to prevent excessive ESPN API calls
 class ESPNCache {
@@ -94,15 +95,21 @@ export class EspnScoresProvider implements ScoresProvider {
 
   async getLiveScores({ gameIds }: { gameIds: string[] }): Promise<GameScore[]> {
     try {
+      if (gameIds.length === 0) return [];
+      
+      // Extract week from the first gameId (format: 2025-W01-TEAM-TEAM)
+      const weekMatch = gameIds[0].match(/W(\d+)/);
+      const week = weekMatch ? parseInt(weekMatch[1]) : getCurrentNFLWeek();
+      
       // Check cache first (shorter cache for live scores - 30 seconds)
-      const cacheKey = `scores_live`;
+      const cacheKey = `scores_live_week${week}`;
       const cachedData = espnCache.get(cacheKey);
       
       let data: any;
       if (cachedData) {
         data = cachedData;
       } else {
-        // For live scores, we'll fetch the current week's scoreboard
+        // For live scores, we'll fetch the requested week's scoreboard
         // ESPN doesn't have a direct endpoint for specific game IDs, so we fetch all and filter
         const response = await fetch(
           `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`

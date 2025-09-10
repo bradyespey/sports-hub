@@ -69,16 +69,36 @@ export const CurrentWeek = () => {
 
         setGames(gamesData);
 
-        // Fetch picks for this week
-        const picksRef = collection(db, 'picks');
-        const picksQuery = query(picksRef, where('gameId', 'in', gamesData.map(g => g.gameId)));
-        const picksSnapshot = await getDocs(picksQuery);
-        
+        // Fetch picks for this week (only if we have games)
         const picksData: Record<string, Pick> = {};
-        picksSnapshot.docs.forEach(doc => {
-          const pick = { ...doc.data(), createdAt: doc.data().createdAt.toDate() } as Pick;
-          picksData[`${pick.gameId}_${pick.uid}`] = pick;
-        });
+        if (gamesData.length > 0) {
+          try {
+            const picksRef = collection(db, 'picks');
+            const gameIds = gamesData.map(g => g.gameId);
+            
+            // Firestore 'in' queries can only handle up to 10 items, so we might need to batch
+            const pickQueries = [];
+            for (let i = 0; i < gameIds.length; i += 10) {
+              const batch = gameIds.slice(i, i + 10);
+              if (batch.length > 0) {
+                const picksQuery = query(picksRef, where('gameId', 'in', batch));
+                pickQueries.push(getDocs(picksQuery));
+              }
+            }
+            
+            const picksSnapshots = await Promise.all(pickQueries);
+            
+            picksSnapshots.forEach(picksSnapshot => {
+              picksSnapshot.docs.forEach(doc => {
+                const pick = { ...doc.data(), createdAt: doc.data().createdAt.toDate() } as Pick;
+                picksData[`${pick.gameId}_${pick.uid}`] = pick;
+              });
+            });
+          } catch (pickError) {
+            console.error('Error fetching picks:', pickError);
+            // Continue without picks data
+          }
+        }
         
         setPicks(picksData);
       } catch (error) {

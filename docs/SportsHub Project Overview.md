@@ -205,6 +205,11 @@ npm run dev
 - **Development Workflow**: Fixed local development to use production functions endpoint for reliability
 - **Mobile UI Improvements**: Fixed odds refresh section overflow and centered week selector on mobile
 - **GitHub Actions Scheduling**: Implemented automated daily odds refresh using GitHub Actions workflow
+- **Standings Season Totals**: Fixed cumulative season totals to properly accumulate across all weeks
+- **Firestore Query Optimization**: Removed Firestore IN query limits by fetching all picks at once
+- **Team Navigation Highlighting**: Fixed blue underline indicator for team detail pages
+- **Washington Commanders Team**: Fixed team abbreviation mapping (WSH → WAS) for proper team lookup
+- **Loading State Improvements**: Added loading states to prevent flashing during data fetching
 
 ### 🔄 In Progress
 - **Mobile Optimization**: Fine-tuning responsive design
@@ -280,6 +285,16 @@ npm run dev
 ### 13. Mobile UI and GitHub Actions Scheduling
 **Problem**: Mobile UI had horizontal scrolling issues with odds refresh section, week selector not centered, needed reliable scheduling solution
 **Solution**: Implemented responsive design for odds refresh section, centered week selector on mobile, created GitHub Actions workflow for daily scheduling, cleaned up debug logging
+**Status**: Resolved
+
+### 14. Standings Season Totals and Data Fetching
+**Problem**: Season totals not accumulating correctly across weeks, Firestore IN query hitting 30-item limit, flashing behavior during data loading
+**Solution**: Modified standings to fetch all previous weeks' game data for cumulative totals, removed real-time picks listener to avoid query limits, added loading states to prevent flashing
+**Status**: Resolved
+
+### 15. Team Navigation and Washington Commanders
+**Problem**: Team detail pages not showing active navigation state, Washington Commanders team not found due to abbreviation mismatch (ESPN uses WSH, app uses WAS)
+**Solution**: Updated navigation component to handle sub-paths for team pages, fixed team abbreviation normalization in EspnTeamsProvider to map WSH to WAS consistently
 **Status**: Resolved
 
 ## Next Steps
