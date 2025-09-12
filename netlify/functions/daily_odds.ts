@@ -8,17 +8,12 @@ dayjs.extend(utc);
 dayjs.extend(tz);
 
 export const handler: ScheduledHandler = async (event) => {
-  // Check if we're being called at 8 AM UTC (which is 2 AM CST)
+  // GitHub Actions runs this at 8 AM UTC (2 AM CST), so we can always run
+  // The time check was causing issues with GitHub Actions timing
   const nowUtc = dayjs().utc();
   const nowCst = dayjs().tz("America/Chicago");
   
-  // Run only at 8 AM UTC (2 AM CST) - this ensures consistent timing regardless of DST
-  if (nowUtc.hour() !== 8) {
-    return { 
-      statusCode: 200, 
-      body: `skip (not 8 AM UTC, current UTC hour: ${nowUtc.hour()}, CST hour: ${nowCst.hour()})` 
-    };
-  }
+  console.log(`Daily odds refresh called at UTC: ${nowUtc.format()}, CST: ${nowCst.format()}`);
 
   const payload = { mode: "daily" };
 
