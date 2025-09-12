@@ -205,6 +205,8 @@ npm run dev
 - **Development Workflow**: Fixed local development to use production functions endpoint for reliability
 - **Mobile UI Improvements**: Fixed odds refresh section overflow and centered week selector on mobile
 - **GitHub Actions Scheduling**: Implemented automated daily odds refresh using GitHub Actions workflow
+- **Timezone Handling**: Fixed GitHub Actions schedule for CDT (7 AM UTC = 2 AM CDT, 8 AM UTC = 3 AM CDT)
+- **Daily Odds Function**: Fixed to include season/week parameters for proper game updates
 - **Standings Season Totals**: Fixed cumulative season totals to properly accumulate across all weeks
 - **Firestore Query Optimization**: Removed Firestore IN query limits by fetching all picks at once
 - **Team Navigation Highlighting**: Fixed blue underline indicator for team detail pages
@@ -295,6 +297,11 @@ npm run dev
 ### 15. Team Navigation and Washington Commanders
 **Problem**: Team detail pages not showing active navigation state, Washington Commanders team not found due to abbreviation mismatch (ESPN uses WSH, app uses WAS)
 **Solution**: Updated navigation component to handle sub-paths for team pages, fixed team abbreviation normalization in EspnTeamsProvider to map WSH to WAS consistently
+**Status**: Resolved
+
+### 16. GitHub Actions Timezone and Daily Odds Parameters
+**Problem**: GitHub Action ran at 3:04 AM instead of 2 AM, daily_odds function updating 0 games instead of 15 like manual refresh
+**Solution**: Fixed cron schedule from 8 AM UTC to 7 AM UTC for CDT timezone (2 AM CDT), added season/week parameters to daily_odds function payload to match manual refresh behavior
 **Status**: Resolved
 
 ## Next Steps
