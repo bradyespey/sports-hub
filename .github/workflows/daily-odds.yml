@@ -2,10 +2,11 @@ name: Daily Odds Refresh
 
 on:
   schedule:
-    # Run at 2 AM CST (8 AM UTC) - this covers both CST and CDT
+    # Run at 2 AM Chicago time (adjusts for DST automatically)
     # CST = UTC-6, so 2 AM CST = 8 AM UTC
-    # CDT = UTC-5, so 2 AM CDT = 7 AM UTC, but we want 2 AM CST = 8 AM UTC
-    - cron: '0 8 * * *'
+    # CDT = UTC-5, so 2 AM CDT = 7 AM UTC
+    # Currently in CDT, so use 7 AM UTC to hit 2 AM CDT
+    - cron: '0 7 * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
