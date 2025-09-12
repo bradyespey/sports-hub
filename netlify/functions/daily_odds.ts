@@ -15,7 +15,18 @@ export const handler: ScheduledHandler = async (event) => {
   
   console.log(`Daily odds refresh called at UTC: ${nowUtc.format()}, CST: ${nowCst.format()}`);
 
-  const payload = { mode: "daily" };
+  // Get current NFL season and week (using same logic as frontend)
+  const season = 2025;
+  
+  // NFL Week Logic: Weeks run Tuesday to Monday
+  // For 2025 season, Week 1 starts September 2nd (Tuesday)
+  const seasonStart = dayjs('2025-09-02').tz("America/Chicago");
+  const weeksSinceStart = nowCst.diff(seasonStart, 'week');
+  const week = Math.max(1, Math.min(22, weeksSinceStart + 1)); // 18 regular + 4 playoff weeks
+  
+  console.log(`Refreshing odds for Season ${season}, Week ${week}`);
+
+  const payload = { season, week, mode: "daily" };
 
   // Use absolute URL to call the existing odds_refresh function
   const oddsRefreshUrl = process.env.INTERNAL_ODDS_REFRESH_URL || "https://sportshub.theespeys.com/.netlify/functions/odds_refresh";
