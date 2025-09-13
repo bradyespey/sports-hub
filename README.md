@@ -159,6 +159,13 @@ SportsHub/
    - Check Firestore security rules for proper user isolation
    - Verify game status and kickoff times
 
+## Next Steps / Future Work
+
+### 🏈 Advanced Features (Priority 3)
+- **Fantasy Integration**: Add Yahoo Fantasy Football dashboard card showing matchup
+- **NCAAF Support**: Add college football league support
+- **Multi-User Support**: Expand beyond Brady and Jenny (future)
+
 ## AI Handoff
 
 This is a React + TypeScript + Firebase application for NFL picks competition. Focus on the provider pattern for data abstraction, Netlify functions for server-side operations, and the strategic pick reveal logic. The app uses real-time data from ESPN and The Odds API with automated daily updates via GitHub Actions. Key components include GameCard for individual games, WeekSelector for navigation, and comprehensive team depth chart integration.
