@@ -17,6 +17,8 @@ interface GameCardProps {
   onPickChange: (gameId: string, selection: string) => void;
   canReveal: boolean;
   currentUserId: string;
+  currentUserName?: string;
+  opponentUserName?: string;
 }
 
 export const GameCard = ({ 
@@ -25,7 +27,9 @@ export const GameCard = ({
   opponentPick, 
   onPickChange, 
   canReveal,
-  currentUserId
+  currentUserId,
+  currentUserName = 'Brady',
+  opponentUserName = 'Jenny'
 }: GameCardProps) => {
   const [selectedPick, setSelectedPick] = useState(userPick?.selection || '');
   
@@ -100,10 +104,10 @@ export const GameCard = ({
     // Only show badges if both players have picked AND game has started
     if (userPick && opponentPick && (isLive || isFinal)) {
       if (userPickedThis) {
-        badges.push("Brady");
+        badges.push(currentUserName);
       }
       if (opponentPickedThis) {
-        badges.push("Jenny");
+        badges.push(opponentUserName);
       }
     }
     

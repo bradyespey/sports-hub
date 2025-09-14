@@ -199,6 +199,11 @@ export const NFLScoreboard = () => {
     return user?.uid === jennyUid ? 'Brady' : 'Jenny';
   };
 
+  const getCurrentUserName = () => {
+    const jennyUid = 'SAMXEs1HopNiPK62qpZnP29SITz2';
+    return user?.uid === jennyUid ? 'Jenny' : 'Brady';
+  };
+
   // Calculate picks counts
   const getUserPickCount = (userId: string) => {
     return Object.values(picks).filter(pick => pick.uid === userId).length;
@@ -386,6 +391,8 @@ export const NFLScoreboard = () => {
                           onPickChange={handlePickChange}
                           canReveal={canRevealPick(game)}
                           currentUserId={user?.uid || ''}
+                          currentUserName={getCurrentUserName()}
+                          opponentUserName={getOpponentName()}
                         />
                       </div>
                     );
@@ -426,6 +433,8 @@ export const NFLScoreboard = () => {
                           onPickChange={handlePickChange}
                           canReveal={canRevealPick(game)}
                           currentUserId={user?.uid || ''}
+                          currentUserName={getCurrentUserName()}
+                          opponentUserName={getOpponentName()}
                         />
                       </div>
                     );
@@ -466,6 +475,8 @@ export const NFLScoreboard = () => {
                           onPickChange={handlePickChange}
                           canReveal={canRevealPick(game)}
                           currentUserId={user?.uid || ''}
+                          currentUserName={getCurrentUserName()}
+                          opponentUserName={getOpponentName()}
                         />
                       </div>
                     );
