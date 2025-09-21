@@ -98,7 +98,7 @@ export function mergeGameWithOddsAndScores(
     ...gameScore,
     status: gameScore?.status === 'final' ? 'final' : game.status,
     // Ensure scores are properly set from gameScore if available
-    homeScore: gameScore?.homeScore || game.homeScore,
-    awayScore: gameScore?.awayScore || game.awayScore
+    homeScore: gameScore?.homeScore ?? game.homeScore,
+    awayScore: gameScore?.awayScore ?? game.awayScore
   };
 }

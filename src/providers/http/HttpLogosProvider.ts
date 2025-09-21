@@ -49,7 +49,6 @@ export class HttpLogosProvider implements LogosProvider {
     }
     
     // Fallback to a working placeholder service
-    console.warn(`Logo not found for team: ${teamAbbr}`);
     return `https://ui-avatars.com/api/?name=${teamAbbr}&size=32&background=1a365d&color=ffffff`;
   }
 }

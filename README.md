@@ -65,14 +65,16 @@ ODDS_API_KEY=YOUR_ODDS_API_KEY
 
 ## Run Modes
 
-- **Development**: `npm run dev` — Netlify dev server with functions at localhost:8888
-- **Vite Only**: `npm run dev:vite` — Frontend only at localhost:5173 (no functions)
+- **Development**: `npm run dev` — Vite dev server at localhost:5173 (fast development)
+- **Netlify Dev**: `npm run dev:netlify` — Full Netlify dev server with functions at localhost:8888
 - **Production**: `npm run build` — Optimized build for deployment
 
 ## Scripts and Ops
 
-- **Development**: `npm run dev` — Start Netlify dev server with functions
+- **Development**: `npm run dev` — Start Vite dev server (fast development)
+- **Netlify Dev**: `npm run dev:netlify` — Start Netlify dev server with functions
 - **Build**: `npm run build` — Create production build
+- **Deploy & Watch**: `npm run deploy:watch` — Push to GitHub and monitor Netlify build
 - **Seed Data**: `npm run seed:nfl2025` — Generate complete 2025 NFL season
 - **Seed Picks**: `npm run seed:week1-picks` — Add Week 1 picks for Brady/Jenny
 - **Generate Season**: `npm run generate:season` — Create NFL schedule data
