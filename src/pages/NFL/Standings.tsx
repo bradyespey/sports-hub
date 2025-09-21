@@ -12,49 +12,38 @@ import { Button } from '@/components/ui/button';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
-import { getCurrentNFLWeek } from '@/lib/dayjs';
+import { getCurrentNFLWeek, isCurrentNFLWeek } from '@/lib/dayjs';
 
 export const NFLStandings = () => {
   const { user, loading } = useAuth();
   const [currentWeek, setCurrentWeek] = useState<Week | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
-  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
   const [isLoadingData, setIsLoadingData] = useState(false);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
 
-  // Get current week
+  // Get current week - always use calculated current week
   useEffect(() => {
-    const fetchCurrentWeek = async () => {
-      const weeksRef = collection(db, 'weeks');
-      const weeksSnapshot = await getDocs(weeksRef);
-      const now = new Date();
-      
-      const weeks = weeksSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          startDateUtc: data.startDateUtc ? data.startDateUtc.toDate() : new Date(),
-          endDateUtc: data.endDateUtc ? data.endDateUtc.toDate() : new Date()
-        };
-      }) as Week[];
-
-      const current = weeks.find(week => 
-        now >= week.startDateUtc && now <= week.endDateUtc
-      );
-
-      if (current) {
-        setCurrentWeek(current);
-        setSelectedWeek(current.week);
-      } else {
-        const fallbackWeek = { season: 2025, week: 1, startDateUtc: new Date('2025-09-04'), endDateUtc: new Date('2025-09-10') };
-        setCurrentWeek(fallbackWeek);
-        setSelectedWeek(1);
-      }
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
+    
+    // Set current week object for compatibility
+    const currentWeekObj: Week = {
+      season: 2025,
+      week: currentWeekNumber,
+      startDateUtc: new Date(), // Will be calculated properly in real implementation
+      endDateUtc: new Date()
     };
-    fetchCurrentWeek();
+    setCurrentWeek(currentWeekObj);
+  }, []);
+
+  // Reset to current week when component mounts (when navigating to Standings)
+  useEffect(() => {
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
   }, []);
 
   // Fetch games and picks when selected week changes
@@ -150,6 +139,12 @@ export const NFLStandings = () => {
     return user?.uid === jennyUid ? 'Brady' : 'Jenny';
   };
 
+  // Reset to current week function
+  const resetToCurrentWeek = () => {
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
+  };
+
   if (loading || isLoadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -192,9 +187,9 @@ export const NFLStandings = () => {
             onWeekChange={setSelectedWeek}
             availableWeeks={availableWeeks}
           />
-          {selectedWeek !== getCurrentNFLWeek() && (
+          {!isCurrentNFLWeek(selectedWeek) && (
             <Button
-              onClick={() => setSelectedWeek(getCurrentNFLWeek())}
+              onClick={resetToCurrentWeek}
               variant="outline"
               size="sm"
             >
