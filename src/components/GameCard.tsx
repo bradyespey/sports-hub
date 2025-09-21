@@ -41,13 +41,27 @@ export const GameCard = ({
   
   const isLocked = game.kickoffUtc <= new Date();
   const bothPlayersPicked = userPick && opponentPick;
-  const shouldShowPickButtons = !isLocked || !bothPlayersPicked;
+  const gameStarted = game.status === 'live' || game.status === 'final';
+  const gameKickoff = new Date(game.kickoffUtc);
+  const now = new Date();
+  
+  // Allow editing during 1-minute buffer for late picks
+  const isInLatePickBuffer = userPick && gameStarted && 
+    new Date(userPick.createdAt) > gameKickoff && 
+    (now.getTime() - new Date(userPick.createdAt).getTime()) < (1000 * 60);
+  
+  // Show pick buttons if:
+  // 1. Game hasn't started yet, OR
+  // 2. Game has started but user hasn't picked yet (allow late picks), OR
+  // 3. User made a late pick and is within 1-minute edit window
+  const shouldShowPickButtons = !isLocked || (gameStarted && !userPick) || isInLatePickBuffer;
   const kickoffLocal = dayjs(game.kickoffUtc).tz(LOCAL_TIMEZONE);
   const isLive = game.status === 'live';
   const isFinal = game.status === 'final';
 
   const handlePickChange = async (selection: string) => {
-    if (isLocked) return;
+    // Allow picks if game hasn't started, user hasn't picked yet, or within late pick buffer
+    if (isLocked && !(gameStarted && !userPick) && !isInLatePickBuffer) return;
     setSelectedPick(selection);
     await onPickChange(game.gameId, selection);
   };
@@ -101,8 +115,8 @@ export const GameCard = ({
     
     const badges = [];
     
-    // Only show badges if both players have picked AND game has started
-    if (userPick && opponentPick && (isLive || isFinal)) {
+    // Show badges if canReveal is true (game has started)
+    if (canReveal) {
       if (userPickedThis) {
         badges.push(currentUserName);
       }
@@ -290,9 +304,9 @@ export const GameCard = ({
           {/* Bottom Row - Odds and Status */}
           <div className="flex items-center justify-between pt-2 border-t">
          <div className="text-xs text-muted-foreground">
-           {game.spreadHome !== undefined && game.spreadHome !== 0 ? (
+           {game.sportsbook?.spreadHome !== undefined && game.sportsbook.spreadHome !== 0 ? (
              <span>
-               {game.spreadHome < 0 ? (
+               {game.sportsbook.spreadHome < 0 ? (
                  <Link 
                    to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.homeTeam))}`}
                    className="hover:underline flex items-center space-x-1 group"
@@ -310,7 +324,7 @@ export const GameCard = ({
                    <span>{getTeamName(game.awayTeam)}</span>
                    <ExternalLink className="h-2 w-2 opacity-50 group-hover:opacity-100 transition-opacity" />
                  </Link>
-               )} {game.spreadHome < 0 ? game.spreadHome : -game.spreadHome}
+               )} {game.sportsbook.spreadHome < 0 ? game.sportsbook.spreadHome : -game.sportsbook.spreadHome}
                {game.network && ` TV: ${game.network}`}
              </span>
            ) : game.network ? (

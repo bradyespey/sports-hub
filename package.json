@@ -10,6 +10,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
+    "deploy:watch": "./scripts/deploy-and-watch.sh",
     "seed": "tsx scripts/seed.ts",
     "seed:nfl2025": "tsx scripts/seed-nfl2025.ts",
     "seed:week1-picks": "tsx scripts/seed-week1-picks.ts",

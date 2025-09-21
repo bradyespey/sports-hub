@@ -1,0 +1,11 @@
+#!/bin/bash
+echo "🚀 Pushing to GitHub..."
+git push origin main
+
+if [ $? -eq 0 ]; then
+    echo "✅ Push successful! Watching Netlify build..."
+    netlify watch
+else
+    echo "❌ Push failed!"
+    exit 1
+fi

@@ -181,7 +181,35 @@ export const NFLScoreboard = () => {
     );
     const bothPicked = userPick && opponentPick;
     const gameStarted = game.status === 'live' || game.status === 'final';
-    return bothPicked && gameStarted;
+    const gameKickoff = new Date(game.kickoffUtc);
+    
+    
+    // Never show picks before game starts (allows editing until kickoff)
+    if (!gameStarted) {
+      return false;
+    }
+    
+    // If both picks were made BEFORE kickoff, show immediately when game starts
+    if (bothPicked) {
+      const userPickTime = new Date(userPick.createdAt);
+      const opponentPickTime = new Date(opponentPick.createdAt);
+      const bothPickedBeforeKickoff = userPickTime <= gameKickoff && opponentPickTime <= gameKickoff;
+      
+      if (bothPickedBeforeKickoff) {
+        return true; // Show immediately at kickoff
+      }
+      
+      // If at least one pick was made AFTER kickoff (late pick), wait 1 minute from last pick
+      const lastPickTime = userPickTime > opponentPickTime ? userPickTime : opponentPickTime;
+      const now = new Date();
+      const minutesSinceLastPick = (now.getTime() - lastPickTime.getTime()) / (1000 * 60);
+      
+      
+      return minutesSinceLastPick >= 1;
+    }
+    
+    // If only one person has picked, don't reveal until both pick and 1 minute passes
+    return false;
   };
 
   const getOpponentId = () => {
@@ -323,17 +351,13 @@ export const NFLScoreboard = () => {
                 <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1">
-                <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setShowPickRules(!showPickRules)}
+                  className="flex items-center justify-between w-full text-left hover:opacity-75 transition-opacity p-1 -m-1 rounded"
+                >
                   <h3 className="font-semibold text-sm">How Picks Work</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPickRules(!showPickRules)}
-                    className="h-6 w-6 p-0"
-                  >
-                    {showPickRules ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </Button>
-                </div>
+                  {showPickRules ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
                 {showPickRules && (
                   <div className="text-sm text-muted-foreground space-y-1 mt-3">
                     <p>• <strong>Make your picks:</strong> Click "Pick" next to your chosen team for each game</p>
@@ -341,6 +365,15 @@ export const NFLScoreboard = () => {
                     <p>• <strong>Change anytime:</strong> You can modify picks up until kickoff for each game</p>
                     <p>• <strong>Strategic reveals:</strong> Picks are only revealed after both players submit AND kickoff occurs</p>
                     <p>• <strong>Auto-save:</strong> Picks save automatically when you select them</p>
+                    <div className="mt-3 pt-3 border-t border-muted">
+                      <p className="font-medium text-foreground mb-2">🕒 Pick Timing Scenarios</p>
+                      <p>• <strong>Before kickoff, no picks:</strong> No picks shown, both can pick freely</p>
+                      <p>• <strong>Before kickoff, both picked:</strong> No picks shown, both can edit until kickoff</p>
+                      <p>• <strong>After kickoff, Brady hasn't picked:</strong> No picks shown, Brady can make late pick</p>
+                      <p>• <strong>After kickoff, Jenny hasn't picked:</strong> No picks shown, Jenny can make late pick</p>
+                      <p>• <strong>After kickoff, late picks made:</strong> 1-minute edit window from last late pick, then picks locked and shown</p>
+                      <p>• <strong>After kickoff, both picked before:</strong> Picks shown immediately at kickoff</p>
+                    </div>
                     <div className="mt-3 pt-3 border-t border-muted">
                       <p className="font-medium text-foreground mb-2">📊 Betting Odds</p>
                       <p>• <strong>Daily updates:</strong> Odds refresh automatically once per day</p>
