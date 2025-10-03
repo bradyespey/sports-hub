@@ -26,7 +26,6 @@ interface UserStats {
 export const Standings = ({ games, picks, currentUserId, opponentUserId, currentUserName, opponentUserName, selectedWeek }: StandingsProps) => {
   const calculateUserStats = (userId: string): UserStats => {
     const userPicks = Object.values(picks).filter(pick => pick.uid === userId);
-    const finalGames = games.filter(game => game.status === 'final');
     
     let weeklyCorrect = 0;
     let weeklyTotal = 0;
@@ -34,7 +33,14 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
     let seasonTotal = 0;
 
     // Calculate weekly stats (current week only)
-    finalGames.forEach(game => {
+    const currentWeekGames = games.filter(game => {
+      const gameWeekMatch = game.gameId.match(/W(\d+)/);
+      if (!gameWeekMatch) return false;
+      const gameWeek = parseInt(gameWeekMatch[1]);
+      return gameWeek === selectedWeek && game.status === 'final';
+    });
+
+    currentWeekGames.forEach(game => {
       const userPick = userPicks.find(pick => pick.gameId === game.gameId);
       if (userPick) {
         const winner = game.homeScore! > game.awayScore! ? game.homeTeam : game.awayTeam;
