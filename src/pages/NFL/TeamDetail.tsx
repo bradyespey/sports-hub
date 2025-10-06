@@ -224,6 +224,14 @@ export const NFLTeamDetail = () => {
                 <Badge variant="outline">{team.abbreviation}</Badge>
                 <Badge variant="secondary">{team.division}</Badge>
                 <Badge variant="secondary">{team.conference}</Badge>
+                {team.record && (
+                  <Badge variant="secondary">
+                    {team.record.ties > 0 
+                      ? `${team.record.wins}-${team.record.losses}-${team.record.ties}`
+                      : `${team.record.wins}-${team.record.losses}`
+                    }
+                  </Badge>
+                )}
               </div>
               
               <div className="flex space-x-2">

@@ -1,5 +1,5 @@
 import { TeamsProvider } from '@/providers/TeamsProvider';
-import { ESPNTeam, Team } from '@/types/teams';
+import { ESPNTeam, Team, TeamRecord } from '@/types/teams';
 
 // Simple cache for ESPN teams data
 class ESPNTeamsCache {
@@ -70,7 +70,9 @@ export class EspnTeamsProvider implements TeamsProvider {
       
       if (data.sports?.[0]?.leagues?.[0]?.teams) {
         for (const espnTeam of data.sports[0].leagues[0].teams) {
-          teams.push(this.transformESPNTeam(espnTeam));
+          const team = this.transformESPNTeam(espnTeam);
+          // Don't fetch records for getAllTeams - they'll be fetched on demand
+          teams.push(team);
         }
       }
 
@@ -105,7 +107,9 @@ export class EspnTeamsProvider implements TeamsProvider {
       }
 
       if (data.team) {
-        return this.transformESPNTeam({ team: data.team });
+        const team = this.transformESPNTeam({ team: data.team });
+        const record = await this.getTeamRecord(team.id);
+        return { ...team, record };
       }
 
       return null;
@@ -121,9 +125,100 @@ export class EspnTeamsProvider implements TeamsProvider {
     
     // Since teams are already normalized to WAS in transformESPNTeam,
     // we can just do a direct lookup
-    return teams.find(team => 
+    const team = teams.find(team => 
       team.abbreviation.toLowerCase() === abbreviation.toLowerCase()
-    ) || null;
+    );
+    
+    if (team) {
+      // Fetch record for individual team page
+      const record = await this.getTeamRecord(team.id);
+      return { ...team, record };
+    }
+    
+    return null;
+  }
+
+  private async getTeamRecord(teamId: string): Promise<TeamRecord | undefined> {
+    try {
+      const cacheKey = `team_record_${teamId}`;
+      const cachedData = espnTeamsCache.get(cacheKey);
+      
+      let data: any;
+      if (cachedData) {
+        data = cachedData;
+      } else {
+        // Use ESPN's individual team API to get team record
+        const response = await fetch(`${this.baseUrl}/teams/${teamId}`);
+        
+        if (!response.ok) {
+          console.error(`ESPN Team API error: ${response.status} ${response.statusText}`);
+          return undefined;
+        }
+
+        data = await response.json();
+        
+        // Cache for 30 minutes (records change after games)
+        espnTeamsCache.set(cacheKey, data, 30 * 60 * 1000);
+      }
+
+      // Extract record from team data
+      
+      if (data.team && data.team.record && data.team.record.items) {
+        const totalRecord = data.team.record.items.find((item: any) => item.type === 'total');
+        
+        if (totalRecord && totalRecord.stats) {
+          const wins = totalRecord.stats.find((stat: any) => stat.name === 'wins')?.value || 0;
+          const losses = totalRecord.stats.find((stat: any) => stat.name === 'losses')?.value || 0;
+          const ties = totalRecord.stats.find((stat: any) => stat.name === 'ties')?.value || 0;
+          const winPercent = totalRecord.stats.find((stat: any) => stat.name === 'winPercent')?.value || 0;
+          const gamesBehind = totalRecord.stats.find((stat: any) => stat.name === 'gamesBehind')?.value || 0;
+          const streak = totalRecord.stats.find((stat: any) => stat.name === 'streak')?.value || 0;
+          
+          // Additional stats for tiebreaking
+          const divisionWins = totalRecord.stats.find((stat: any) => stat.name === 'divisionWins')?.value || 0;
+          const divisionLosses = totalRecord.stats.find((stat: any) => stat.name === 'divisionLosses')?.value || 0;
+          const divisionTies = totalRecord.stats.find((stat: any) => stat.name === 'divisionTies')?.value || 0;
+          const divisionRecord = totalRecord.stats.find((stat: any) => stat.name === 'divisionRecord')?.value || 0;
+          const pointsFor = totalRecord.stats.find((stat: any) => stat.name === 'pointsFor')?.value || 0;
+          const pointsAgainst = totalRecord.stats.find((stat: any) => stat.name === 'pointsAgainst')?.value || 0;
+          const pointDifferential = totalRecord.stats.find((stat: any) => stat.name === 'pointDifferential')?.value || 0;
+          const gamesPlayed = totalRecord.stats.find((stat: any) => stat.name === 'gamesPlayed')?.value || 0;
+
+          // Convert streak to readable format
+          let streakText = '';
+          if (streak > 0) {
+            streakText = `W${streak}`;
+          } else if (streak < 0) {
+            streakText = `L${Math.abs(streak)}`;
+          }
+
+          const record = {
+            wins: Math.round(wins),
+            losses: Math.round(losses),
+            ties: Math.round(ties),
+            winPercentage: winPercent,
+            gamesBack: gamesBehind,
+            streak: streakText,
+            // Additional stats for tiebreaking
+            divisionWins: Math.round(divisionWins),
+            divisionLosses: Math.round(divisionLosses),
+            divisionTies: Math.round(divisionTies),
+            divisionRecord: divisionRecord,
+            pointsFor: Math.round(pointsFor),
+            pointsAgainst: Math.round(pointsAgainst),
+            pointDifferential: Math.round(pointDifferential),
+            gamesPlayed: Math.round(gamesPlayed)
+          };
+          
+          return record;
+        }
+      }
+
+      return undefined;
+    } catch (error) {
+      console.error(`Error fetching team record for ${teamId}:`, error);
+      return undefined;
+    }
   }
 
   private transformESPNTeam(espnTeam: ESPNTeam): Team {

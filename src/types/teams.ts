@@ -34,6 +34,24 @@ export interface ESPNTeam {
   };
 }
 
+export interface TeamRecord {
+  wins: number;
+  losses: number;
+  ties: number;
+  winPercentage: number;
+  gamesBack: number;
+  streak: string;
+  // Additional stats for tiebreaking
+  divisionWins?: number;
+  divisionLosses?: number;
+  divisionTies?: number;
+  divisionRecord?: number;
+  pointsFor?: number;
+  pointsAgainst?: number;
+  pointDifferential?: number;
+  gamesPlayed?: number;
+}
+
 export interface Team {
   id: string;
   abbreviation: string;
@@ -49,6 +67,7 @@ export interface Team {
   clubhouseUrl?: string;
   rosterUrl?: string;
   depthChartUrl?: string;
+  record?: TeamRecord;
 }
 
 export interface DepthChartPosition {

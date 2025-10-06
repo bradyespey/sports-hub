@@ -10,10 +10,12 @@ import { WeekSelector } from '@/components/WeekSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Game, Pick, Week } from '@/types';
+import { Team } from '@/types/teams';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { OddsRefreshButton } from '@/components/OddsRefreshButton';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 import { getCurrentNFLWeek, isCurrentNFLWeek } from '@/lib/dayjs';
+import { getTeamName } from '@/lib/teamNames';
 import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 export const NFLScoreboard = () => {
@@ -24,9 +26,52 @@ export const NFLScoreboard = () => {
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
   const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
   const [showPickRules, setShowPickRules] = useState(false);
+  const [teams, setTeams] = useState<Record<string, Team>>({});
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
+  const teamsProvider = ProviderFactory.createTeamsProvider();
+
+  // Helper function to get team abbreviation for URL
+  const getTeamAbbreviation = (teamName: string): string => {
+    // Map from short team names (like "Chargers") to URL abbreviations
+    const teamAbbreviations: Record<string, string> = {
+      'Cardinals': 'ari',
+      'Falcons': 'atl',
+      'Ravens': 'bal',
+      'Bills': 'buf',
+      'Panthers': 'car',
+      'Bears': 'chi',
+      'Bengals': 'cin',
+      'Browns': 'cle',
+      'Cowboys': 'dal',
+      'Broncos': 'den',
+      'Lions': 'det',
+      'Packers': 'gb',
+      'Texans': 'hou',
+      'Colts': 'ind',
+      'Jaguars': 'jax',
+      'Chiefs': 'kc',
+      'Raiders': 'lv',
+      'Chargers': 'lac',
+      'Rams': 'lar',
+      'Dolphins': 'mia',
+      'Vikings': 'min',
+      'Patriots': 'ne',
+      'Saints': 'no',
+      'Giants': 'nyg',
+      'Jets': 'nyj',
+      'Eagles': 'phi',
+      'Steelers': 'pit',
+      '49ers': 'sf',
+      'Seahawks': 'sea',
+      'Buccaneers': 'tb',
+      'Titans': 'ten',
+      'Commanders': 'was'
+    };
+    
+    return teamAbbreviations[teamName] || teamName.toLowerCase().replace(/\s+/g, '-');
+  };
 
 
   // Get current week - always use calculated current week
@@ -49,6 +94,56 @@ export const NFLScoreboard = () => {
     const currentWeekNumber = getCurrentNFLWeek();
     setSelectedWeek(currentWeekNumber);
   }, []);
+
+  // Fetch teams data once on component mount
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const teamsData = await teamsProvider.getAllTeams();
+        const teamsMap: Record<string, Team> = {};
+        teamsData.forEach(team => {
+          teamsMap[team.abbreviation] = team;
+        });
+        setTeams(teamsMap);
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+    };
+
+    fetchTeams();
+  }, []);
+
+  // Fetch records for teams playing this week when both teams and games are loaded
+  useEffect(() => {
+    const fetchRecordsForWeek = async () => {
+      if (games.length === 0 || Object.keys(teams).length === 0) return;
+
+      const weekTeams = new Set<string>();
+      games.forEach(game => {
+        weekTeams.add(game.homeTeam);
+        weekTeams.add(game.awayTeam);
+      });
+
+      // Fetch records for teams playing this week
+      const teamRecordPromises = Array.from(weekTeams).map(async (teamName) => {
+        const teamAbbreviation = getTeamAbbreviation(getTeamName(teamName)).toUpperCase();
+        const team = teams[teamAbbreviation];
+        if (team && !team.record) {
+          const teamWithRecord = await teamsProvider.getTeam(team.id);
+          if (teamWithRecord?.record) {
+            setTeams(prev => ({
+              ...prev,
+              [teamAbbreviation]: { ...prev[teamAbbreviation], record: teamWithRecord.record }
+            }));
+          }
+        }
+      });
+
+      await Promise.all(teamRecordPromises);
+    };
+
+    fetchRecordsForWeek();
+  }, [games, teams]);
 
   // Fetch games and picks when selected week changes
   useEffect(() => {
@@ -426,6 +521,7 @@ export const NFLScoreboard = () => {
                           currentUserId={user?.uid || ''}
                           currentUserName={getCurrentUserName()}
                           opponentUserName={getOpponentName()}
+                          teams={teams}
                         />
                       </div>
                     );
@@ -468,6 +564,7 @@ export const NFLScoreboard = () => {
                           currentUserId={user?.uid || ''}
                           currentUserName={getCurrentUserName()}
                           opponentUserName={getOpponentName()}
+                          teams={teams}
                         />
                       </div>
                     );
@@ -510,6 +607,7 @@ export const NFLScoreboard = () => {
                           currentUserId={user?.uid || ''}
                           currentUserName={getCurrentUserName()}
                           opponentUserName={getOpponentName()}
+                          teams={teams}
                         />
                       </div>
                     );

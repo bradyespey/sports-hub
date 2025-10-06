@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Game, Pick } from '@/types';
+import { Team } from '@/types/teams';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ interface GameCardProps {
   currentUserId: string;
   currentUserName?: string;
   opponentUserName?: string;
+  teams?: Record<string, Team>;
 }
 
 export const GameCard = ({ 
@@ -29,7 +31,8 @@ export const GameCard = ({
   canReveal,
   currentUserId,
   currentUserName = 'Brady',
-  opponentUserName = 'Jenny'
+  opponentUserName = 'Jenny',
+  teams = {}
 }: GameCardProps) => {
   const [selectedPick, setSelectedPick] = useState(userPick?.selection || '');
   
@@ -183,6 +186,58 @@ export const GameCard = ({
     return teamAbbreviations[teamName] || teamName.toLowerCase().replace(/\s+/g, '-');
   };
 
+  // Helper function to get team record display
+  const getTeamRecordDisplay = (teamName: string): string => {
+    // Map team names to ESPN abbreviations
+    const teamNameToAbbreviation: Record<string, string> = {
+      'Cardinals': 'ARI',
+      'Falcons': 'ATL',
+      'Ravens': 'BAL',
+      'Bills': 'BUF',
+      'Panthers': 'CAR',
+      'Bears': 'CHI',
+      'Bengals': 'CIN',
+      'Browns': 'CLE',
+      'Cowboys': 'DAL',
+      'Broncos': 'DEN',
+      'Lions': 'DET',
+      'Packers': 'GB',
+      'Texans': 'HOU',
+      'Colts': 'IND',
+      'Jaguars': 'JAX',
+      'Chiefs': 'KC',
+      'Raiders': 'LV',
+      'Chargers': 'LAC',
+      'Rams': 'LAR',
+      'Dolphins': 'MIA',
+      'Vikings': 'MIN',
+      'Patriots': 'NE',
+      'Saints': 'NO',
+      'Giants': 'NYG',
+      'Jets': 'NYJ',
+      'Eagles': 'PHI',
+      'Steelers': 'PIT',
+      '49ers': 'SF',
+      'Seahawks': 'SEA',
+      'Buccaneers': 'TB',
+      'Titans': 'TEN',
+      'Commanders': 'WAS'
+    };
+    
+    const teamAbbreviation = teamNameToAbbreviation[getTeamName(teamName)];
+    const team = teams[teamAbbreviation];
+    
+    if (team?.record) {
+      const { wins, losses, ties } = team.record;
+      if (ties > 0) {
+        return `${wins}-${losses}-${ties}`;
+      }
+      return `${wins}-${losses}`;
+    }
+    
+    return '';
+  };
+
   return (
     <Card className="game-card hover:shadow-md transition-shadow">
       <CardContent className="p-3 sm:p-4">
@@ -198,14 +253,21 @@ export const GameCard = ({
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${game.awayTeam}&size=24&background=f3f4f6&color=374151`;
                 }}
               />
-              <Link 
-                to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.awayTeam))}`}
-                className={`font-semibold text-sm sm:text-base hover:underline flex items-center space-x-1 group ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}
-                title="View team depth chart"
-              >
-                <span>{getTeamName(game.awayTeam)}</span>
-                <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-              </Link>
+              <div className="flex flex-col">
+                <Link 
+                  to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.awayTeam))}`}
+                  className={`font-semibold text-sm sm:text-base hover:underline flex items-center space-x-1 group ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}
+                  title="View team depth chart"
+                >
+                  <span>{getTeamName(game.awayTeam)}</span>
+                  <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                </Link>
+                {getTeamRecordDisplay(game.awayTeam) && (
+                  <span className="text-xs text-muted-foreground">
+                    {getTeamRecordDisplay(game.awayTeam)}
+                  </span>
+                )}
+              </div>
               {(isLive || isFinal) && game.awayScore !== undefined && (
                 <div className="flex items-center space-x-1">
                   <span className={`text-lg font-bold ${isWinningTeam(game.awayTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -255,14 +317,21 @@ export const GameCard = ({
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${game.homeTeam}&size=24&background=f3f4f6&color=374151`;
                 }}
               />
-              <Link 
-                to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.homeTeam))}`}
-                className={`font-semibold text-sm sm:text-base hover:underline flex items-center space-x-1 group ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}
-                title="View team depth chart"
-              >
-                <span>{getTeamName(game.homeTeam)}</span>
-                <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-              </Link>
+              <div className="flex flex-col">
+                <Link 
+                  to={`/nfl/teams/${getTeamAbbreviation(getTeamName(game.homeTeam))}`}
+                  className={`font-semibold text-sm sm:text-base hover:underline flex items-center space-x-1 group ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}
+                  title="View team depth chart"
+                >
+                  <span>{getTeamName(game.homeTeam)}</span>
+                  <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                </Link>
+                {getTeamRecordDisplay(game.homeTeam) && (
+                  <span className="text-xs text-muted-foreground">
+                    {getTeamRecordDisplay(game.homeTeam)}
+                  </span>
+                )}
+              </div>
               {(isLive || isFinal) && game.homeScore !== undefined && (
                 <div className="flex items-center space-x-1">
                   <span className={`text-lg font-bold ${isWinningTeam(game.homeTeam) && isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>

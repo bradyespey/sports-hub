@@ -4,7 +4,7 @@
 
 ## Overview
 
-A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts and real-time standings calculation.
+A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts, real-time standings calculation, and NFL tiebreaking procedures.
 
 ## Live and Admin
 
@@ -99,13 +99,20 @@ Manual deploy: Push to GitHub `main` branch
 - **/** — NFL index page with quick summary and navigation
 - **/nfl/scoreboard** — Main picks interface with live scores and odds
 - **/nfl/standings** — Weekly and season standings between Brady and Jenny
-- **/nfl/teams** — Team directory with logos, divisions, and depth chart links
+- **/nfl/teams** — Team directory with logos, divisions, records, and depth chart links
 - **/nfl/teams/:teamId** — Individual team depth charts (offense, defense, special teams)
 
 ### Navigation Features
 - **Week Selector**: Navigate between NFL weeks with current week highlighting
 - **Sticky Navigation**: NFL nav bar stays fixed when scrolling
 - **Current Week Button**: Quick navigation back to current week from past/future weeks
+
+### Team Records & Standings
+- **Live Records**: Real-time team records displayed on Scores and Teams pages
+- **NFL Tiebreaking**: Official NFL tiebreaking procedures for division standings
+- **Preseason Handling**: Alphabetical sorting for 0-0 records before season starts
+- **Conference Layout**: AFC divisions on left, NFC divisions on right
+- **Division Order**: North → East → South → West within each conference
 
 ## Directory Map
 
@@ -122,7 +129,7 @@ SportsHub/
 │   ├── providers/         # Data provider implementations
 │   │   ├── http/          # ESPN/Odds API providers
 │   │   └── fantasy/       # Sleeper/Yahoo integration
-│   ├── lib/               # Firebase config and utilities
+│   ├── lib/               # Firebase config, utilities, and NFL tiebreaking
 │   └── types/             # TypeScript definitions
 ├── netlify/
 │   └── functions/         # Server-side functions
