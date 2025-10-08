@@ -218,28 +218,52 @@ export const NFLFantasy = () => {
     }
   };
 
-  // Calculate projections from cached data (memory or Firestore)
-  const calculateProjectionsFromCache = (week: number, roster: PlayerData[]): PlayerData[] => {
+  // Calculate projections - fetch missing historical data from API if needed
+  const calculateProjectionsFromCache = async (week: number, roster: PlayerData[]): Promise<PlayerData[]> => {
     if (week === 1) return roster; // No projections for Week 1
     
     const currentNFLWeek = getCurrentNFLWeek();
-    const lastCompletedWeek = currentNFLWeek - 1;
+    const lastWeekToConsider = Math.min(week - 1, currentNFLWeek - 1);
     
-    return roster.map(player => {
+    // console.log(`[Projections] Week ${week}: Looking at weeks 1-${lastWeekToConsider} for historical data`);
+    
+    const provider = FantasyProviderFactory.createProvider();
+    if (!provider) return roster;
+    
+    const projectionPromises = roster.map(async (player) => {
       if (!player.player_key) return player;
       
       const historicalPoints: number[] = [];
       
-      // Look through all completed weeks for this player's historical data
-      for (let w = 1; w <= lastCompletedWeek; w++) {
+      // Look through weeks 1 to lastWeekToConsider for this player's historical data
+      for (let w = 1; w <= lastWeekToConsider; w++) {
         const cachedWeek = weekCache.get(w);
+        let playerPoints = 0;
+        
         if (cachedWeek) {
-          // Find this player in the cached roster
+          // First try to find player in cached roster
           const cachedPlayer = cachedWeek.myRoster.find(p => p.player_key === player.player_key) ||
                               cachedWeek.opponentRoster.find(p => p.player_key === player.player_key);
-          if (cachedPlayer && cachedPlayer.points > 0) {
-            historicalPoints.push(cachedPlayer.points);
+          if (cachedPlayer) {
+            playerPoints = cachedPlayer.points;
           }
+        }
+        
+        // If player not found in cache, fetch from API
+        if (playerPoints === 0 && !cachedWeek?.myRoster.find(p => p.player_key === player.player_key) && 
+            !cachedWeek?.opponentRoster.find(p => p.player_key === player.player_key)) {
+          try {
+            const result = await getPlayerStatsWithCache(player.player_key, w, provider);
+            playerPoints = result.points;
+          } catch (error) {
+            // Player data not available for this week, skip
+            continue;
+          }
+        }
+        
+        // Only include non-zero points (exclude bye weeks/injuries)
+        if (playerPoints > 0) {
+          historicalPoints.push(playerPoints);
         }
       }
       
@@ -250,11 +274,18 @@ export const NFLFantasy = () => {
         projection = Math.round(average * 100) / 100;
       }
       
+      // Debug log for specific players (remove in production)
+      if (player.name.includes('St. Brown') || player.name.includes('Fields')) {
+        console.log(`[Projections] ${player.name} Week ${week}: Historical points:`, historicalPoints, `Projection: ${projection}`);
+      }
+      
       return {
         ...player,
         projectedPoints: projection
       };
     });
+    
+    return Promise.all(projectionPromises);
   };
 
   // Load week data from API (extracted for reuse)
@@ -552,9 +583,9 @@ export const NFLFantasy = () => {
       // Ensure historical data is loaded for projections
       await ensureHistoricalWeeksLoaded(week);
       
-      // Calculate projections with all available historical data
-      const myRosterWithProj = calculateProjectionsFromCache(week, cached.myRoster);
-      const oppRosterWithProj = calculateProjectionsFromCache(week, cached.opponentRoster);
+      // Calculate projections with all available historical data (fetches missing player data from API)
+      const myRosterWithProj = await calculateProjectionsFromCache(week, cached.myRoster);
+      const oppRosterWithProj = await calculateProjectionsFromCache(week, cached.opponentRoster);
       
       setMyRoster(myRosterWithProj);
       setOpponentRoster(oppRosterWithProj);
@@ -579,9 +610,9 @@ export const NFLFantasy = () => {
           // Ensure historical data is loaded for projections
           await ensureHistoricalWeeksLoaded(week);
           
-          // Calculate projections from all available historical data
-          const myRosterWithProj = calculateProjectionsFromCache(week, data.myRoster);
-          const oppRosterWithProj = calculateProjectionsFromCache(week, data.opponentRoster);
+          // Calculate projections from all available historical data (fetches missing player data from API)
+          const myRosterWithProj = await calculateProjectionsFromCache(week, data.myRoster);
+          const oppRosterWithProj = await calculateProjectionsFromCache(week, data.opponentRoster);
           
           setMyRoster(myRosterWithProj);
           setOpponentRoster(oppRosterWithProj);
@@ -603,9 +634,9 @@ export const NFLFantasy = () => {
         // Ensure historical data is loaded for projections
         await ensureHistoricalWeeksLoaded(week);
         
-        // Calculate projections from all available historical data
-        const myRosterWithProj = calculateProjectionsFromCache(week, weekData.myRoster);
-        const oppRosterWithProj = calculateProjectionsFromCache(week, weekData.opponentRoster);
+        // Calculate projections from all available historical data (fetches missing player data from API)
+        const myRosterWithProj = await calculateProjectionsFromCache(week, weekData.myRoster);
+        const oppRosterWithProj = await calculateProjectionsFromCache(week, weekData.opponentRoster);
         
         setMyRoster(myRosterWithProj);
         setOpponentRoster(oppRosterWithProj);

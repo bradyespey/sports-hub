@@ -240,7 +240,8 @@ The app integrates with Yahoo Fantasy Football to display:
 - **Detailed game statistics** (e.g., "283 Pass Yds, 2 Pass TD, 2 2-PT")
 - Real-time stat updates during games
 - Full PPR, Half PPR, or Standard scoring support
-- **Rolling average projections** excluding zero-point weeks (bye weeks/injuries)
+- **Smart rolling average projections** excluding zero-point weeks (bye weeks/injuries)
+- **Intelligent historical data fetching** for mid-season pickups (fetches missing player data from API)
 - **Firestore persistence** for completed weeks (instant loading)
 - **Mobile-responsive design** with card-based layout for small screens
 - Conditional display (only shows when `VITE_FANTASY_PROVIDER=yahoo`)
