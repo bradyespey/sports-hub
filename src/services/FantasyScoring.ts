@@ -36,11 +36,28 @@ interface ScoringSettings {
 export class FantasyScoring {
   private scoringMap: Map<number, number> = new Map();
   private settingsLoaded = false;
+  private loadingPromise: Promise<void> | null = null;
 
   /**
    * Load league scoring settings from Yahoo API
    */
   async loadLeagueSettings(leagueId: string): Promise<void> {
+    // If already loaded, return immediately
+    if (this.settingsLoaded) {
+      return;
+    }
+    
+    // If currently loading, return the existing promise
+    if (this.loadingPromise) {
+      return this.loadingPromise;
+    }
+    
+    // Start loading
+    this.loadingPromise = this._loadSettings(leagueId);
+    return this.loadingPromise;
+  }
+
+  private async _loadSettings(leagueId: string): Promise<void> {
     try {
       const response = await fetch(
         `/.netlify/functions/yahoo-fantasy?endpoint=settings&leagueId=${leagueId}`
@@ -90,7 +107,7 @@ export class FantasyScoring {
         console.warn('No stat modifiers found, using default scoring');
         this.loadDefaultScoring();
       } else {
-        console.log(`Loaded ${this.scoringMap.size} scoring settings from league`);
+        // Scoring settings loaded successfully
       }
 
       this.settingsLoaded = true;

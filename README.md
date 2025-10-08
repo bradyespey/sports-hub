@@ -150,15 +150,40 @@ SportsHub/
 │   └── types/             # TypeScript definitions
 ├── netlify/
 │   └── functions/         # Server-side functions
-│       ├── odds_refresh.ts # Odds fetching logic
-│       ├── daily_odds.ts  # Scheduled automation
-│       ├── yahoo-fantasy.ts # Yahoo Fantasy API proxy
-│       ├── yahoo-auth.ts  # Yahoo OAuth authentication
+│       ├── odds_refresh.ts # Odds fetching logic for manual refresh
+│       ├── daily_odds.ts  # Scheduled automation (GitHub Actions)
+│       ├── pulse.ts       # Real-time odds/scores monitoring with usage tracking
+│       ├── schedule_daily.ts # Daily scheduled function for odds refresh
+│       ├── yahoo-fantasy.ts # Yahoo Fantasy API proxy with caching
+│       ├── yahoo-auth.ts  # Yahoo OAuth authentication flow
 │       ├── yahoo-auth-callback.ts # Yahoo OAuth callback handler
 │       └── yahoo-manual-token.ts # Yahoo token refresh utility
 ├── scripts/               # Data seeding and utilities
 └── docs/                  # Project documentation (archived)
 ```
+
+## Netlify Functions
+
+The application uses 8 serverless functions for backend operations:
+
+### Data Management Functions
+- **`odds_refresh.ts`** — Manual odds refresh endpoint with caching logic
+- **`daily_odds.ts`** — Scheduled automation triggered by GitHub Actions at 2 AM CDT
+- **`pulse.ts`** — Real-time monitoring with API usage tracking and intelligent refresh intervals
+- **`schedule_daily.ts`** — Daily scheduled function for automated odds refresh
+
+### Yahoo Fantasy Integration Functions  
+- **`yahoo-fantasy.ts`** — Main API proxy with caching, rate limiting, and error handling
+- **`yahoo-auth.ts`** — OAuth authentication flow initiation
+- **`yahoo-auth-callback.ts`** — OAuth callback handler for token exchange
+- **`yahoo-manual-token.ts`** — Manual token refresh utility for development
+
+### Function Features
+- **Caching Strategy**: Firestore persistence for completed weeks (instant loading)
+- **Rate Limiting**: Intelligent API usage tracking to stay within quotas
+- **Error Handling**: Comprehensive error handling with fallback mechanisms
+- **Authentication**: Secure OAuth flow with automatic token refresh
+- **Monitoring**: Real-time usage tracking and performance metrics
 
 ## Troubleshooting
 

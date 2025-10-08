@@ -23,6 +23,7 @@ interface PlayerData {
   projectedPoints: number;
   stats?: string;
   status?: string;
+  player_key?: string;
 }
 
 interface MatchupTeam {
@@ -64,8 +65,10 @@ interface WeekCache {
 }
 
 // Global cache outside component to persist across all re-renders
-const playerStatsCache = new Map<string, number>(); // key: "playerKey_week", value: points
-const projectionCache = new Map<string, number>(); // key: playerKey, value: projection
+// Cache version - increment to bust cache when format changes
+const CACHE_VERSION = 'v3';
+const playerStatsCache = new Map<string, { points: number; stats: string }>(); // key: "playerKey_week_v3", value: {points, stats}
+// Projection cache removed - projections calculated on-the-fly caused excessive API requests
 
 export const NFLFantasy = () => {
   const [loading, setLoading] = useState(true);
@@ -95,352 +98,123 @@ export const NFLFantasy = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showTooltip]);
 
-  // Initialize to current NFL week on mount
+  // Initialize and load current NFL week on mount
   useEffect(() => {
     const currentWeek = getCurrentNFLWeek();
     setSelectedWeek(currentWeek);
     loadFantasyData(currentWeek);
-  }, []);
+  }, []); // Only run once on mount
+  
+  // Load data when week selector changes (not on initial mount)
+  const handleWeekChange = (week: number) => {
+    setSelectedWeek(week);
+    loadWeekData(week);  // Call loadWeekData directly, not loadFantasyData
+  };
 
-  const getPlayerStatsWithCache = async (playerKey: string, week: number, provider: any): Promise<number> => {
-    const cacheKey = `${playerKey}_${week}`;
+  const getPlayerStatsWithCache = async (playerKey: string, week: number, provider: any): Promise<{ points: number; stats: string }> => {
+    const cacheKey = `${playerKey}_${week}_${CACHE_VERSION}`;
     if (playerStatsCache.has(cacheKey)) {
       return playerStatsCache.get(cacheKey)!;
     }
     
     try {
-      const points = await (provider as any).getPlayerStats(playerKey, week);
-      playerStatsCache.set(cacheKey, points);
-      return points;
+      const result = await (provider as any).getPlayerStatsWithDetails(playerKey, week);
+      playerStatsCache.set(cacheKey, result);
+      return result;
     } catch (error) {
       console.error(`Failed to get stats for ${playerKey} week ${week}:`, error);
-      return 0;
+      return { points: 0, stats: '—' };
     }
   };
 
-  const calculateRollingAverageProjection = async (
-    playerKey: string, 
-    viewingWeek: number, 
-    provider: any
-  ): Promise<number> => {
-    try {
-      // Check if already calculated
-      if (projectionCache.has(playerKey)) {
-        return projectionCache.get(playerKey)!;
-      }
-      
-      // Projections based on COMPLETED weeks only
-      const currentNFLWeek = getCurrentNFLWeek();
-      const completedWeeks = currentNFLWeek - 1;
-      
-      if (completedWeeks === 0) {
-        projectionCache.set(playerKey, 0);
-        return 0;
-      }
-      
-      // Fetch stats from all COMPLETED weeks using cache
-      const historicalPoints: number[] = [];
-      
-      for (let week = 1; week <= completedWeeks; week++) {
-        const points = await getPlayerStatsWithCache(playerKey, week, provider);
-        // Only include weeks where they scored points (exclude 0s for bye weeks/injuries)
-        if (points > 0) {
-          historicalPoints.push(points);
-        }
-      }
-      
-      // Calculate average from all available historical data (excluding zeros)
-      let projection = 0;
-      if (historicalPoints.length > 0) {
-        const average = historicalPoints.reduce((sum, pts) => sum + pts, 0) / historicalPoints.length;
-        projection = Math.round(average * 100) / 100;
-      }
-      
-      // Cache the result globally
-      projectionCache.set(playerKey, projection);
-      
-      return projection;
-    } catch (error) {
-      console.error('Error calculating projection:', error);
-      return 0;
-    }
-  };
+  // Projections now loaded in background - see loadProjectionsInBackground()
 
   const loadFantasyData = async (week: number = selectedWeek) => {
-    setLoading(true);
+    // Just use loadWeekData - it has all the logic we need with caching
+    await loadWeekData(week);
+    
+    // Also load league info on initial load
     try {
       const provider = FantasyProviderFactory.createProvider();
-      
-      if (!provider) {
-        throw new Error('Fantasy provider not configured');
-      }
-
-      // Get league info
-      const leagueInfo = await provider.getLeagueInfo();
-      setLeagueName(leagueInfo.name);
-
-      // Get team ID
-      const teams = await provider.getUserTeams();
-      const teamId = teams.brady;
-
-      // Fetch my team roster for the selected week
-      const myTeamResponse = await fetch(
-        `/.netlify/functions/yahoo-fantasy?endpoint=team&teamId=${teamId}&week=${week}&leagueId=${import.meta.env.VITE_YAHOO_LEAGUE_ID || '590446'}`
-      );
-      const myTeamData = await myTeamResponse.json();
-      
-      // Parse my team info and roster
-      const teamArray = myTeamData.fantasy_content?.team?.[0];
-      if (teamArray) {
-        const teamInfo: MatchupTeam = {
-          teamKey: '',
-          name: '',
-          logo: '',
-          manager: '',
-          points: 0,
-          projectedPoints: 0,
-        };
+      if (provider) {
+        const leagueInfo = await provider.getLeagueInfo();
+        setLeagueName(leagueInfo.name);
         
-        for (const item of teamArray) {
-          if (item.team_key) teamInfo.teamKey = item.team_key;
-          if (item.name) teamInfo.name = item.name;
-          if (item.team_logos) teamInfo.logo = item.team_logos[0]?.team_logo?.url || '';
-          if (item.managers) teamInfo.manager = item.managers[0]?.manager?.nickname || '';
-        }
+        const teams = await provider.getUserTeams();
+        const teamId = teams.brady;
         
-        setMyTeam(teamInfo);
-      }
-
-      // Parse roster from team[1]
-      const rosterObj = myTeamData.fantasy_content?.team?.[1]?.roster;
-      if (rosterObj) {
-        const players: PlayerData[] = [];
-        const playersData = rosterObj['0']?.players;
-        
-        if (playersData) {
-          // First, gather all player info
-          const playerPromises = [];
-          for (let i = 0; i < playersData.count; i++) {
-            const playerArray = playersData[i]?.player;
-            if (playerArray && playerArray.length >= 2) {
-              const info = playerArray[0];
-              const stats = playerArray[1];
-              const playerKey = info.find((p: any) => p.player_key)?.player_key;
-              
-              const playerData: PlayerData = {
-                name: info.find((p: any) => p.name)?.name?.full || 'Unknown',
-                position: info.find((p: any) => p.display_position)?.display_position || '',
-                team: info.find((p: any) => p.editorial_team_abbr)?.editorial_team_abbr || '',
-                selectedPosition: stats?.selected_position?.[1]?.position || 'BN',
-                points: 0, // Will be calculated
-                projectedPoints: (() => {
-                  const proj = parseFloat(stats?.player_projected_points?.total || '0');
-                  return proj > 0 ? proj : Math.max(0, parseFloat(stats?.player_points?.total || '0') * 0.8);
-                })(),
-                stats: '—', // Will be fetched
-                status: info.find((p: any) => p.status)?.status || '',
-              };
-              
-              // Fetch player stats to calculate points and get detailed stats
-              if (playerKey && provider) {
-                playerPromises.push(
-                  (provider as any).getPlayerStatsWithDetails(playerKey, week).then((result: { points: number; stats: string }) => {
-                    playerData.points = result.points;
-                    playerData.stats = result.stats;
-                    return playerData;
-                  }).catch((error: any) => {
-                    console.error(`Failed to get stats for ${playerData.name} (${playerKey}):`, error);
-                    // Set a placeholder value instead of 0 to indicate stats are unavailable
-                    playerData.points = -1; // -1 indicates stats unavailable
-                    playerData.stats = '—';
-                    return playerData;
-                  })
-                );
-              } else {
-                playerPromises.push(Promise.resolve(playerData));
-              }
-            }
-          }
-          
-          // Wait for all player stats to be fetched
-          const playersWithStats = await Promise.all(playerPromises);
-          setMyRoster(playersWithStats);
-        }
-      }
-
-      // Get matchup data
-      const matchupResponse = await fetch(
-        `/.netlify/functions/yahoo-fantasy?endpoint=matchups&teamId=${teamId}&week=${week}&leagueId=${import.meta.env.VITE_YAHOO_LEAGUE_ID || '590446'}`
-      );
-      const matchupData = await matchupResponse.json();
-      
-      const matchupsObj = matchupData.fantasy_content?.team?.[1]?.matchups;
-      if (matchupsObj && matchupsObj['0']?.matchup) {
-        const matchup = matchupsObj['0'].matchup;
-        const teamsData = matchup['0']?.teams;
-        
-        // Parse both teams
-        const team1Array = teamsData['0']?.team?.[0];
-        const team1Stats = teamsData['0']?.team?.[1];
-        const team2Array = teamsData['1']?.team?.[0];
-        const team2Stats = teamsData['1']?.team?.[1];
-        
-        const team1: MatchupTeam = {
-          teamKey: '',
-          name: '',
-          logo: '',
-          manager: '',
-          points: parseFloat(team1Stats?.team_points?.total || '0'),
-          projectedPoints: parseFloat(team1Stats?.team_projected_points?.total || '0'),
-        };
-        
-        const team2: MatchupTeam = {
-          teamKey: '',
-          name: '',
-          logo: '',
-          manager: '',
-          points: parseFloat(team2Stats?.team_points?.total || '0'),
-          projectedPoints: parseFloat(team2Stats?.team_projected_points?.total || '0'),
-        };
-        
-        if (team1Array) {
-          for (const item of team1Array) {
-            if (item.team_key) team1.teamKey = item.team_key;
-            if (item.name) team1.name = item.name;
-            if (item.team_logos) team1.logo = item.team_logos[0]?.team_logo?.url || '';
-            if (item.managers) team1.manager = item.managers[0]?.manager?.nickname || '';
-          }
-        }
-        
-        if (team2Array) {
-          for (const item of team2Array) {
-            if (item.team_key) team2.teamKey = item.team_key;
-            if (item.name) team2.name = item.name;
-            if (item.team_logos) team2.logo = item.team_logos[0]?.team_logo?.url || '';
-            if (item.managers) team2.manager = item.managers[0]?.manager?.nickname || '';
-          }
-        }
-        
-        setCurrentMatchup({
-          team1,
-          team2,
-          status: matchup.status || 'preevent',
-          winnerTeamKey: matchup.winner_team_key,
-        });
-
-        // Fetch opponent roster for the selected week
-        const opponentTeamId = team1.teamKey === teamId ? team2.teamKey : team1.teamKey;
-        const oppResponse = await fetch(
-          `/.netlify/functions/yahoo-fantasy?endpoint=team&teamId=${opponentTeamId}&week=${week}&leagueId=${import.meta.env.VITE_YAHOO_LEAGUE_ID || '590446'}`
+        // Get my team info
+        const myTeamResponse = await fetch(
+          `/.netlify/functions/yahoo-fantasy?endpoint=team&teamId=${teamId}&week=${week}&leagueId=${import.meta.env.VITE_YAHOO_LEAGUE_ID || '590446'}`
         );
-        const oppData = await oppResponse.json();
+        const myTeamData = await myTeamResponse.json();
         
-        const oppRosterObj = oppData.fantasy_content?.team?.[1]?.roster;
-        if (oppRosterObj) {
-          const oppPlayerPromises = [];
-          const oppPlayersData = oppRosterObj['0']?.players;
+        const teamArray = myTeamData.fantasy_content?.team?.[0];
+        if (teamArray) {
+          const teamInfo: MatchupTeam = {
+            teamKey: '',
+            name: '',
+            logo: '',
+            manager: '',
+            points: 0,
+            projectedPoints: 0,
+          };
           
-          if (oppPlayersData) {
-            for (let i = 0; i < oppPlayersData.count; i++) {
-              const playerArray = oppPlayersData[i]?.player;
-              if (playerArray && playerArray.length >= 2) {
-                const info = playerArray[0];
-                const stats = playerArray[1];
-                const playerKey = info.find((p: any) => p.player_key)?.player_key;
-                
-                const playerData: PlayerData = {
-                  name: info.find((p: any) => p.name)?.name?.full || 'Unknown',
-                  position: info.find((p: any) => p.display_position)?.display_position || '',
-                  team: info.find((p: any) => p.editorial_team_abbr)?.editorial_team_abbr || '',
-                  selectedPosition: stats?.selected_position?.[1]?.position || 'BN',
-                  points: 0, // Will be calculated
-                  projectedPoints: (() => {
-                  const proj = parseFloat(stats?.player_projected_points?.total || '0');
-                  return proj > 0 ? proj : Math.max(0, parseFloat(stats?.player_points?.total || '0') * 0.8);
-                })(),
-                  stats: '—', // Will be fetched
-                  status: info.find((p: any) => p.status)?.status || '',
-                };
-                
-                // Fetch player stats to calculate points and get detailed stats
-                if (playerKey && provider) {
-                  oppPlayerPromises.push(
-                    (provider as any).getPlayerStatsWithDetails(playerKey, week).then((result: { points: number; stats: string }) => {
-                      playerData.points = result.points;
-                      playerData.stats = result.stats;
-                      return playerData;
-                    }).catch((error: any) => {
-                      console.error(`Failed to get stats for opponent ${playerData.name} (${playerKey}):`, error);
-                      playerData.points = -1; // -1 indicates stats unavailable
-                      playerData.stats = '—';
-                      return playerData;
-                    })
-                  );
-                } else {
-                  oppPlayerPromises.push(Promise.resolve(playerData));
-                }
-              }
-            }
-            
-            // Wait for all opponent player stats
-            const oppPlayersWithStats = await Promise.all(oppPlayerPromises);
-            setOpponentRoster(oppPlayersWithStats);
+          for (const item of teamArray) {
+            if (item.team_key) teamInfo.teamKey = item.team_key;
+            if (item.name) teamInfo.name = item.name;
+            if (item.team_logos) teamInfo.logo = item.team_logos[0]?.team_logo?.url || '';
+            if (item.managers) teamInfo.manager = item.managers[0]?.manager?.nickname || '';
           }
+          
+          setMyTeam(teamInfo);
         }
       }
-
-      // Get all league matchups
-      const scoreboardResponse = await fetch(
-        `/.netlify/functions/yahoo-fantasy?endpoint=scoreboard&week=${week}&leagueId=${import.meta.env.VITE_YAHOO_LEAGUE_ID || '590446'}`
-      );
-      const scoreboardData = await scoreboardResponse.json();
-      
-      const scoreboard = scoreboardData.fantasy_content?.league?.[1]?.scoreboard;
-      if (scoreboard && scoreboard['0']?.matchups) {
-        const matchupsData = scoreboard['0'].matchups;
-        const leagueMatchupsList: LeagueMatchup[] = [];
-        
-        for (let i = 0; i < matchupsData.count; i++) {
-          const matchup = matchupsData[i]?.matchup;
-          if (matchup) {
-            const teams = matchup['0']?.teams;
-            const team1Array = teams['0']?.team?.[0];
-            const team1Stats = teams['0']?.team?.[1];
-            const team2Array = teams['1']?.team?.[0];
-            const team2Stats = teams['1']?.team?.[1];
-            
-            leagueMatchupsList.push({
-              team1Name: team1Array?.find((item: any) => item.name)?.name || '',
-              team1Logo: team1Array?.find((item: any) => item.team_logos)?.team_logos[0]?.team_logo?.url || '',
-              team1Manager: team1Array?.find((item: any) => item.managers)?.managers[0]?.manager?.nickname || '',
-              team1Points: parseFloat(team1Stats?.team_points?.total || '0'),
-              team2Name: team2Array?.find((item: any) => item.name)?.name || '',
-              team2Logo: team2Array?.find((item: any) => item.team_logos)?.team_logos[0]?.team_logo?.url || '',
-              team2Manager: team2Array?.find((item: any) => item.managers)?.managers[0]?.manager?.nickname || '',
-              team2Points: parseFloat(team2Stats?.team_points?.total || '0'),
-              status: matchup.status || 'preevent',
-            });
-          }
-        }
-        setAllMatchups(leagueMatchupsList);
-      }
-
     } catch (error) {
-      console.error('Failed to load fantasy data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Failed to load league info:', error);
     }
-  };
-
-  const handleWeekChange = async (week: number) => {
-    setSelectedWeek(week);
-    await loadWeekData(week);
   };
 
   const resetToCurrentWeek = () => {
     const currentWeek = getCurrentNFLWeek();
     setSelectedWeek(currentWeek);
     loadWeekData(currentWeek);
+  };
+
+  // Calculate projections from cached Firestore data only (no additional API calls)
+  const calculateProjectionsFromCache = (week: number, roster: PlayerData[]): PlayerData[] => {
+    if (week === 1) return roster; // No projections for Week 1
+    
+    return roster.map(player => {
+      if (!player.player_key) return player;
+      
+      const historicalPoints: number[] = [];
+      
+      // Look up cached weeks from memory
+      for (let w = 1; w < week; w++) {
+        const cachedWeek = weekCache.get(w);
+        if (cachedWeek) {
+          // Find this player in the cached roster
+          const cachedPlayer = cachedWeek.myRoster.find(p => p.player_key === player.player_key) ||
+                              cachedWeek.opponentRoster.find(p => p.player_key === player.player_key);
+          if (cachedPlayer && cachedPlayer.points > 0) {
+            historicalPoints.push(cachedPlayer.points);
+          }
+        }
+      }
+      
+      // Calculate average (excluding zeros)
+      let projection = 0;
+      if (historicalPoints.length > 0) {
+        const average = historicalPoints.reduce((sum, pts) => sum + pts, 0) / historicalPoints.length;
+        projection = Math.round(average * 100) / 100;
+      }
+      
+      return {
+        ...player,
+        projectedPoints: projection
+      };
+    });
   };
 
   const loadWeekData = async (week: number) => {
@@ -460,27 +234,36 @@ export const NFLFantasy = () => {
       return;
     }
     
-    // For completed weeks, check Firestore
+    // For completed weeks, check Firestore first (instant loading)
     if (isCompletedWeek) {
       try {
-        const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}`);
+        const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}_v5`);
         const weekDoc = await getDoc(weekDocRef);
         
         if (weekDoc.exists()) {
           const data = weekDoc.data() as WeekCache;
-          setMyRoster(data.myRoster);
-          setOpponentRoster(data.opponentRoster);
+          
+          // Calculate projections from cached data
+          const myRosterWithProj = calculateProjectionsFromCache(week, data.myRoster);
+          const oppRosterWithProj = calculateProjectionsFromCache(week, data.opponentRoster);
+          
+          setMyRoster(myRosterWithProj);
+          setOpponentRoster(oppRosterWithProj);
           setCurrentMatchup(data.currentMatchup);
           setAllMatchups(data.allMatchups);
           
-          // Also save to memory cache
-          setWeekCache(prev => new Map(prev).set(week, data));
+          // Save to memory cache with projections
+          const weekDataWithProj = {
+            ...data,
+            myRoster: myRosterWithProj,
+            opponentRoster: oppRosterWithProj
+          };
+          setWeekCache(prev => new Map(prev).set(week, weekDataWithProj));
           setLoading(false);
           return;
         }
       } catch (error) {
         console.error(`Failed to load week ${week} from Firestore:`, error);
-        // Continue to API fetch
       }
     }
     
@@ -530,24 +313,25 @@ export const NFLFantasy = () => {
                 points: 0,
                 projectedPoints: 0, // Will be set after fetching actual points
                 status: info.find((p: any) => p.status)?.status || '',
+                player_key: playerKey,
               };
               
               if (playerKey && provider) {
+                // Fetch stats for selected week only (projections loaded in background later)
                 playerPromises.push(
-                  Promise.all([
-                    getPlayerStatsWithCache(playerKey, week, provider),
-                    calculateRollingAverageProjection(playerKey, week, provider)
-                  ]).then(([points, projection]) => {
+                  getPlayerStatsWithCache(playerKey, week, provider).then((result) => {
                     return {
                       ...playerData,
-                      points: points,
-                      projectedPoints: projection
+                      points: result.points,
+                      stats: result.stats,
+                      projectedPoints: 0  // Will be populated by background fetch
                     };
                   }).catch((error: any) => {
                     console.error(`Failed to get stats for ${playerData.name}:`, error);
                     return {
                       ...playerData,
                       points: -1,
+                      stats: '—',
                       projectedPoints: 0
                     };
                   })
@@ -654,28 +438,29 @@ export const NFLFantasy = () => {
                   points: 0,
                   projectedPoints: 0, // Will be set after fetching actual points
                   status: info.find((p: any) => p.status)?.status || '',
+                  player_key: playerKey,
                 };
                 
                 if (playerKey && provider) {
-                oppPlayerPromises.push(
-                  Promise.all([
-                    getPlayerStatsWithCache(playerKey, week, provider),
-                    calculateRollingAverageProjection(playerKey, week, provider)
-                  ]).then(([points, projection]) => {
-                    return {
-                      ...playerData,
-                      points: points,
-                      projectedPoints: projection
-                    };
-                  }).catch((error: any) => {
-                    console.error(`Failed to get stats for opponent ${playerData.name}:`, error);
-                    return {
-                      ...playerData,
-                      points: -1,
-                      projectedPoints: 0
-                    };
-                  })
-                );
+                  // Fetch stats for selected week only (projections loaded in background later)
+                  oppPlayerPromises.push(
+                    getPlayerStatsWithCache(playerKey, week, provider).then((result) => {
+                      return {
+                        ...playerData,
+                        points: result.points,
+                        stats: result.stats,
+                        projectedPoints: 0  // Will be populated by background fetch
+                      };
+                    }).catch((error: any) => {
+                      console.error(`Failed to get stats for opponent ${playerData.name}:`, error);
+                      return {
+                        ...playerData,
+                        points: -1,
+                        stats: '—',
+                        projectedPoints: 0
+                      };
+                    })
+                  );
                 } else {
                   oppPlayerPromises.push(Promise.resolve(playerData));
                 }
@@ -735,11 +520,19 @@ export const NFLFantasy = () => {
       };
       
       setWeekCache(prev => new Map(prev).set(week, weekData));
+      
+      // Calculate projections from cached weeks (no additional API calls)
+      if (week > 1) {
+        const myRosterWithProj = calculateProjectionsFromCache(week, myRosterData);
+        const oppRosterWithProj = calculateProjectionsFromCache(week, opponentRosterData);
+        setMyRoster(myRosterWithProj);
+        setOpponentRoster(oppRosterWithProj);
+      }
 
-      // For completed weeks, also save to Firestore for permanent storage
+      // For completed weeks, save to Firestore for future instant loading
       if (isCompletedWeek) {
         try {
-          const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}`);
+          const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}_v5`);
           await setDoc(weekDocRef, weekData);
         } catch (error) {
           console.error(`Failed to save week ${week} to Firestore:`, error);
@@ -747,7 +540,7 @@ export const NFLFantasy = () => {
       }
 
     } catch (error) {
-      console.error('Failed to load week data:', error);
+      console.error(`Week ${week}: Failed to load week data:`, error);
     } finally {
       setLoading(false);
     }

@@ -263,6 +263,12 @@ export class YahooProvider implements FantasyProvider {
       // Format stats for display (similar to Yahoo's format)
       const statsString = this.formatStatsForDisplay(statMap);
       
+      // Only log non-zero stats to reduce console spam
+      const nonZeroStats = Object.entries(statMap).filter(([_, value]) => value > 0);
+      if (nonZeroStats.length > 0) {
+        // Stats processed successfully
+      }
+      
       return { points, stats: statsString };
     } catch (error) {
       console.error(`Failed to fetch stats for player ${playerKey}:`, error);
@@ -270,50 +276,114 @@ export class YahooProvider implements FantasyProvider {
     }
   }
 
-  private formatStatsForDisplay(statMap: Record<string, number>): string {
+  private formatStatsForDisplay(statMap: Record<number, number>): string {
     const stats: string[] = [];
     
-    // Common stat mappings (you may need to adjust these based on your league settings)
-    const statLabels: Record<string, string> = {
-      'passing_yards': 'Pass Yds',
-      'passing_touchdowns': 'Pass TD',
-      'passing_interceptions': 'Int',
-      'passing_2pt_conversions': '2-PT',
-      'rushing_yards': 'Rush Yds',
-      'rushing_touchdowns': 'Rush TD',
-      'rushing_2pt_conversions': '2-PT',
-      'receiving_yards': 'Rec Yds',
-      'receiving_touchdowns': 'Rec TD',
-      'receiving_receptions': 'Rec',
-      'receiving_2pt_conversions': '2-PT',
-      'field_goals_0_19': 'FG 0-19',
-      'field_goals_20_29': 'FG 20-29',
-      'field_goals_30_39': 'FG 30-39',
-      'field_goals_40_49': 'FG 40-49',
-      'field_goals_50_plus': 'FG 50+',
-      'field_goals_made': 'FG Made',
-      'field_goals_attempted': 'FG Att',
-      'extra_points_made': 'PAT Made',
-      'extra_points_attempted': 'PAT Att',
-      'defense_sacks': 'Sack',
-      'defense_interceptions': 'Int',
-      'defense_fumble_recoveries': 'Fum Rec',
-      'defense_touchdowns': 'TD',
-      'defense_safeties': 'Safety',
-      'defense_points_allowed_0': 'PA 0',
-      'defense_points_allowed_1_6': 'PA 1-6',
-      'defense_points_allowed_7_13': 'PA 7-13',
-      'defense_points_allowed_14_20': 'PA 14-20',
-      'defense_points_allowed_21_27': 'PA 21-27',
-      'defense_points_allowed_28_34': 'PA 28-34',
-      'defense_points_allowed_35_plus': 'PA 35+',
+    // Yahoo Fantasy stat ID mappings to display labels
+    const statLabels: Record<number, string> = {
+      // Passing
+      0: 'GP',
+      1: 'Pass Att',
+      2: 'Pass Comp',
+      3: 'Pass Inc',
+      4: 'Pass Yds',
+      5: 'Pass TD',
+      6: 'Int',
+      7: 'Int',
+      // Rushing
+      8: 'Rush Att',
+      9: 'Rush Yds',
+      10: 'Rush TD',
+      // Receiving
+      11: 'Rec',
+      12: 'Rec Yds',
+      13: 'Rec TD',
+      14: 'Rec Tgt',
+      // Misc Offense
+      15: 'Return TD',
+      16: '2-PT',
+      17: '2-PT',
+      18: 'Fum Lost',
+      // Kicking
+      29: 'FG 0-19',
+      30: 'FG 20-29',
+      31: 'FG 30-39',
+      32: 'FG 40-49',
+      33: 'FG 50+',
+      34: 'FG Miss',
+      35: 'PAT',
+      36: 'PAT Miss',
+      // Defense/Special Teams
+      19: 'Def TD',
+      20: 'Sack',
+      21: 'Int',
+      22: 'Fum Rec',
+      23: 'Safety',
+      24: 'Block',
+      // Points Allowed (for DST)
+      45: 'PA 0',
+      46: 'PA 1-6',
+      47: 'PA 7-13',
+      48: 'PA 14-20',
+      49: 'PA 21-27',
+      50: 'PA 28-34',
+      51: 'PA 35+',
+      // First Downs & Misc Stats (most are hidden)
+      52: 'PA 0',
+      53: 'PA 1-6',
+      54: 'PA 7-13',
+      55: 'PA 14-17',
+      56: 'PA 28-34',
+      58: 'Pass 1st',
+      59: 'Pass 1st',
+      60: 'Pass 1st',
+      61: 'Pass 1st',
+      62: 'Rush 1st',
+      63: 'Rec 1st',
+      64: 'Rec 1st',
+      67: 'Kck Ret 1st',
+      68: 'Tackles',
+      69: 'Ret Yds',
+      73: 'PA 0',
+      74: 'PA 1-6',
+      75: 'PA 7-13',
+      77: 'Tackles',
+      78: 'Rec Tgt',
+      79: 'Pass Inc',
+      80: 'Rec 1st',
+      81: 'Rush 1st',
+      84: 'Ret Yds',
+      85: 'Tackles',
+      86: 'Tackles',
+      27: 'Block',
+      28: 'Block',
+      37: 'PAT',
     };
 
-    // Add stats that have values > 0
-    for (const [statKey, value] of Object.entries(statMap)) {
-      if (value > 0) {
-        const label = statLabels[statKey] || statKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        stats.push(`${value} ${label}`);
+    // Priority order for display (most important fantasy-scoring stats first)
+    const displayOrder = [4, 5, 6, 11, 12, 13, 9, 10, 16, 18, 29, 30, 31, 32, 33, 35, 19, 20, 21, 22, 23, 45, 46, 47, 48, 49, 50, 51];
+    
+    // Stats to completely hide (non-scoring, verbose tracking stats)
+    const hideStats = [0, 1, 2, 3, 7, 8, 14, 27, 28, 37, 52, 53, 54, 55, 56, 58, 59, 60, 61, 62, 63, 64, 67, 68, 69, 73, 74, 75, 77, 78, 79, 80, 81, 84, 85, 86];
+    
+    // First add stats in priority order
+    for (const statId of displayOrder) {
+      const value = statMap[statId];
+      if (value && value > 0 && statLabels[statId]) {
+        stats.push(`${value} ${statLabels[statId]}`);
+      }
+    }
+    
+    // Then add any remaining stats not in priority order (if they're not hidden)
+    for (const [statIdStr, value] of Object.entries(statMap)) {
+      const statId = parseInt(statIdStr);
+      if (value > 0 && !displayOrder.includes(statId) && !hideStats.includes(statId)) {
+        if (statLabels[statId]) {
+          stats.push(`${value} ${statLabels[statId]}`);
+        } else {
+          // Unknown stat ID - show with ID for debugging
+          stats.push(`${value} [stat${statId}]`);
+        }
       }
     }
 
