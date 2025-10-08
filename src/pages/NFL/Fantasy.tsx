@@ -181,17 +181,57 @@ export const NFLFantasy = () => {
     loadWeekData(currentWeek);
   };
 
-  // Calculate projections from cached Firestore data only (no additional API calls)
+  // Load historical weeks needed for projections (from Firestore or API)
+  const ensureHistoricalWeeksLoaded = async (targetWeek: number) => {
+    const currentNFLWeek = getCurrentNFLWeek();
+    const lastCompletedWeek = currentNFLWeek - 1;
+    
+    // For projections, we need data from all previous completed weeks
+    const weeksToLoad = Math.min(targetWeek - 1, lastCompletedWeek);
+    
+    for (let w = 1; w <= weeksToLoad; w++) {
+      // Skip if already in memory cache
+      if (weekCache.get(w)) continue;
+      
+      // Try loading from Firestore first
+      try {
+        const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${w}_v5`);
+        const weekDoc = await getDoc(weekDocRef);
+        
+        if (weekDoc.exists()) {
+          const data = weekDoc.data() as WeekCache;
+          setWeekCache(prev => new Map(prev).set(w, data));
+          continue;
+        }
+      } catch (error) {
+        console.error(`Failed to load week ${w} from Firestore:`, error);
+      }
+      
+      // If not in Firestore and it's a completed week, load from API
+      if (w < currentNFLWeek) {
+        try {
+          await loadWeekDataFromAPI(w, true); // silent = true (don't update UI)
+        } catch (error) {
+          console.error(`Failed to load week ${w} from API:`, error);
+        }
+      }
+    }
+  };
+
+  // Calculate projections from cached data (memory or Firestore)
   const calculateProjectionsFromCache = (week: number, roster: PlayerData[]): PlayerData[] => {
     if (week === 1) return roster; // No projections for Week 1
+    
+    const currentNFLWeek = getCurrentNFLWeek();
+    const lastCompletedWeek = currentNFLWeek - 1;
     
     return roster.map(player => {
       if (!player.player_key) return player;
       
       const historicalPoints: number[] = [];
       
-      // Look up cached weeks from memory
-      for (let w = 1; w < week; w++) {
+      // Look through all completed weeks for this player's historical data
+      for (let w = 1; w <= lastCompletedWeek; w++) {
         const cachedWeek = weekCache.get(w);
         if (cachedWeek) {
           // Find this player in the cached roster
@@ -203,7 +243,7 @@ export const NFLFantasy = () => {
         }
       }
       
-      // Calculate average (excluding zeros)
+      // Calculate average (excluding zeros for bye weeks/injuries)
       let projection = 0;
       if (historicalPoints.length > 0) {
         const average = historicalPoints.reduce((sum, pts) => sum + pts, 0) / historicalPoints.length;
@@ -217,56 +257,8 @@ export const NFLFantasy = () => {
     });
   };
 
-  const loadWeekData = async (week: number) => {
-    setLoading(true);
-    
-    const currentNFLWeek = getCurrentNFLWeek();
-    const isCompletedWeek = week < currentNFLWeek;
-    
-    // Check memory cache first
-    const cached = weekCache.get(week);
-    if (cached) {
-      setMyRoster(cached.myRoster);
-      setOpponentRoster(cached.opponentRoster);
-      setCurrentMatchup(cached.currentMatchup);
-      setAllMatchups(cached.allMatchups);
-      setLoading(false);
-      return;
-    }
-    
-    // For completed weeks, check Firestore first (instant loading)
-    if (isCompletedWeek) {
-      try {
-        const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}_v5`);
-        const weekDoc = await getDoc(weekDocRef);
-        
-        if (weekDoc.exists()) {
-          const data = weekDoc.data() as WeekCache;
-          
-          // Calculate projections from cached data
-          const myRosterWithProj = calculateProjectionsFromCache(week, data.myRoster);
-          const oppRosterWithProj = calculateProjectionsFromCache(week, data.opponentRoster);
-          
-          setMyRoster(myRosterWithProj);
-          setOpponentRoster(oppRosterWithProj);
-          setCurrentMatchup(data.currentMatchup);
-          setAllMatchups(data.allMatchups);
-          
-          // Save to memory cache with projections
-          const weekDataWithProj = {
-            ...data,
-            myRoster: myRosterWithProj,
-            opponentRoster: oppRosterWithProj
-          };
-          setWeekCache(prev => new Map(prev).set(week, weekDataWithProj));
-          setLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error(`Failed to load week ${week} from Firestore:`, error);
-      }
-    }
-    
+  // Load week data from API (extracted for reuse)
+  const loadWeekDataFromAPI = async (week: number, silent: boolean = false): Promise<WeekCache | null> => {
     try {
       const provider = FantasyProviderFactory.createProvider();
       if (!provider) return;
@@ -521,15 +513,17 @@ export const NFLFantasy = () => {
       
       setWeekCache(prev => new Map(prev).set(week, weekData));
       
-      // Calculate projections from cached weeks (no additional API calls)
-      if (week > 1) {
-        const myRosterWithProj = calculateProjectionsFromCache(week, myRosterData);
-        const oppRosterWithProj = calculateProjectionsFromCache(week, opponentRosterData);
-        setMyRoster(myRosterWithProj);
-        setOpponentRoster(oppRosterWithProj);
+      // Update UI if not silent
+      if (!silent) {
+        setMyRoster(myRosterData);
+        setOpponentRoster(opponentRosterData);
+        setCurrentMatchup(currentMatchupData);
+        setAllMatchups(allMatchupsData);
       }
 
       // For completed weeks, save to Firestore for future instant loading
+      const currentNFLWeek = getCurrentNFLWeek();
+      const isCompletedWeek = week < currentNFLWeek;
       if (isCompletedWeek) {
         try {
           const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}_v5`);
@@ -539,6 +533,83 @@ export const NFLFantasy = () => {
         }
       }
 
+      return weekData;
+    } catch (error) {
+      console.error(`Week ${week}: Failed to load week data:`, error);
+      return null;
+    }
+  };
+
+  const loadWeekData = async (week: number) => {
+    setLoading(true);
+    
+    const currentNFLWeek = getCurrentNFLWeek();
+    const isCompletedWeek = week < currentNFLWeek;
+    
+    // Check memory cache first
+    const cached = weekCache.get(week);
+    if (cached) {
+      // Ensure historical data is loaded for projections
+      await ensureHistoricalWeeksLoaded(week);
+      
+      // Calculate projections with all available historical data
+      const myRosterWithProj = calculateProjectionsFromCache(week, cached.myRoster);
+      const oppRosterWithProj = calculateProjectionsFromCache(week, cached.opponentRoster);
+      
+      setMyRoster(myRosterWithProj);
+      setOpponentRoster(oppRosterWithProj);
+      setCurrentMatchup(cached.currentMatchup);
+      setAllMatchups(cached.allMatchups);
+      setLoading(false);
+      return;
+    }
+    
+    // For completed weeks, check Firestore first (instant loading)
+    if (isCompletedWeek) {
+      try {
+        const weekDocRef = doc(db, 'fantasy', '2025', 'weeks', `week${week}_v5`);
+        const weekDoc = await getDoc(weekDocRef);
+        
+        if (weekDoc.exists()) {
+          const data = weekDoc.data() as WeekCache;
+          
+          // Save to memory cache first
+          setWeekCache(prev => new Map(prev).set(week, data));
+          
+          // Ensure historical data is loaded for projections
+          await ensureHistoricalWeeksLoaded(week);
+          
+          // Calculate projections from all available historical data
+          const myRosterWithProj = calculateProjectionsFromCache(week, data.myRoster);
+          const oppRosterWithProj = calculateProjectionsFromCache(week, data.opponentRoster);
+          
+          setMyRoster(myRosterWithProj);
+          setOpponentRoster(oppRosterWithProj);
+          setCurrentMatchup(data.currentMatchup);
+          setAllMatchups(data.allMatchups);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error(`Failed to load week ${week} from Firestore:`, error);
+      }
+    }
+    
+    try {
+      // Load this week's data from API
+      const weekData = await loadWeekDataFromAPI(week, false);
+      
+      if (weekData) {
+        // Ensure historical data is loaded for projections
+        await ensureHistoricalWeeksLoaded(week);
+        
+        // Calculate projections from all available historical data
+        const myRosterWithProj = calculateProjectionsFromCache(week, weekData.myRoster);
+        const oppRosterWithProj = calculateProjectionsFromCache(week, weekData.opponentRoster);
+        
+        setMyRoster(myRosterWithProj);
+        setOpponentRoster(oppRosterWithProj);
+      }
     } catch (error) {
       console.error(`Week ${week}: Failed to load week data:`, error);
     } finally {
