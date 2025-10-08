@@ -195,18 +195,29 @@ SportsHub/
 ## Fantasy Football Integration
 
 The app integrates with Yahoo Fantasy Football to display:
-- Team roster with player stats and positions
+- Team roster with individual player fantasy points and detailed game statistics
 - Live matchup scores during games
 - All league matchups for the current week
-- Projected vs actual points
+- Player-by-player matchup comparison with stats display
+- League-specific scoring calculations
+- Rolling average projections based on historical performance
+- Mobile-responsive matchup interface
 
 **Setup**: See `YAHOO_FANTASY_SETUP.md` for complete integration instructions.
 
 **Features**:
 - Read-only access via Yahoo OAuth
 - Automatic token refresh
-- Real-time updates during games
+- **Individual player fantasy points** calculated from league scoring settings
+- **Detailed game statistics** (e.g., "283 Pass Yds, 2 Pass TD, 2 2-PT")
+- Real-time stat updates during games
+- Full PPR, Half PPR, or Standard scoring support
+- **Rolling average projections** excluding zero-point weeks (bye weeks/injuries)
+- **Firestore persistence** for completed weeks (instant loading)
+- **Mobile-responsive design** with card-based layout for small screens
 - Conditional display (only shows when `VITE_FANTASY_PROVIDER=yahoo`)
+
+**Technical Details**: See `docs/FANTASY_SCORING_IMPLEMENTATION.md` for implementation details.
 
 ## Next Steps / Future Work
 

@@ -200,6 +200,23 @@ export const handler: Handler = async (event) => {
         url = `https://fantasysports.yahooapis.com/fantasy/v2/league/461.l.${leagueId}/players;week=${week};stats=week;out=stats?format=json`;
         break;
       
+      case 'settings':
+        url = `https://fantasysports.yahooapis.com/fantasy/v2/league/461.l.${leagueId}/settings?format=json`;
+        break;
+      
+      case 'roster-stats':
+        const rosterTeamId = params.teamId;
+        const rosterWeek = params.week;
+        if (!rosterTeamId || !rosterWeek) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Missing teamId or week parameter' }),
+          };
+        }
+        url = `https://fantasysports.yahooapis.com/fantasy/v2/team/${rosterTeamId}/roster;week=${rosterWeek}/players/stats?format=json`;
+        break;
+      
       default:
         return {
           statusCode: 400,

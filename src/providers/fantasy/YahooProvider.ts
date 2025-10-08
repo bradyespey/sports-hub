@@ -1,6 +1,7 @@
 // src/providers/fantasy/YahooProvider.ts
 import { FantasyProvider } from '../interfaces';
 import { FantasyLeague, FantasyMatchup } from '@/types';
+import { getFantasyScoring } from '@/services/FantasyScoring';
 
 interface YahooTeam {
   team_key: string;
@@ -22,6 +23,7 @@ export class YahooProvider implements FantasyProvider {
   private leagueId = import.meta.env.VITE_YAHOO_LEAGUE_ID || '590446';
   private teamName = import.meta.env.VITE_YAHOO_TEAM_NAME || 'Espeys in the Endzone';
   private cachedTeamId: string | null = null;
+  private scoringService = getFantasyScoring();
 
   private async fetchYahoo(endpoint: string, params: Record<string, string> = {}) {
     const url = new URL(this.baseUrl, window.location.origin);
@@ -46,6 +48,11 @@ export class YahooProvider implements FantasyProvider {
     try {
       const data = await this.fetchYahoo('league');
       const league = data.fantasy_content?.league?.[0];
+      
+      // Load scoring settings when getting league info
+      if (!this.scoringService.isLoaded()) {
+        await this.scoringService.loadLeagueSettings(this.leagueId);
+      }
       
       return {
         name: league?.name || 'Double Coverage League',
@@ -160,79 +167,156 @@ export class YahooProvider implements FantasyProvider {
 
   async getPlayerStats(playerKey: string, week: number): Promise<number> {
     try {
+      // Ensure scoring settings are loaded
+      if (!this.scoringService.isLoaded()) {
+        await this.scoringService.loadLeagueSettings(this.leagueId);
+      }
+
       const data = await this.fetchYahoo('player-stats', { 
         playerKey, 
         week: week.toString() 
       });
       
       // Parse the player stats response based on Yahoo API structure
-      const player = data.fantasy_content?.player?.[0];
-      if (!player) return 0;
+      const playerArray = data.fantasy_content?.player;
+      if (!playerArray || playerArray.length === 0) {
+        console.warn(`No player data found for ${playerKey}`);
+        return 0;
+      }
 
-      // Stats are at index [1] of the player array
-      const statsObj = player[1]?.player_stats;
-
-      if (!statsObj || !statsObj.stats) return 0;
-
-      const stats = statsObj.stats;
-      
-      // Build a map of stat_id to value for easy lookup
-      const statMap: Record<string, number> = {};
-      for (const statItem of stats) {
-        if (statItem && statItem.stat) {
-          const stat = statItem.stat;
-          if (stat.stat_id && (stat.value !== undefined && stat.value !== null)) {
-            statMap[stat.stat_id] = parseFloat(stat.value) || 0;
-          }
+      // Find player_stats in the array
+      let statsData = null;
+      for (const item of playerArray) {
+        if (item?.player_stats) {
+          statsData = item.player_stats;
+          break;
         }
       }
 
-      // Calculate fantasy points using standard scoring rules
-      // Common Yahoo stat IDs (may vary by league):
-      // 4: Passing Yards, 5: Passing TDs, 6: Interceptions
-      // 9: Rushing Yards, 10: Rushing TDs
-      // 11: Receptions, 12: Receiving Yards, 13: Receiving TDs
-      // 15: Return TDs, 16: 2-Point Conversions
-      // 18: Fumbles Lost, 57: Offensive Fumble Return TD
-      // 29: Field Goals 0-19, 30: Field Goals 20-29, 31: Field Goals 30-39
-      // 32: Field Goals 40-49, 33: Field Goals 50+, 35: PAT Made
-      
-      let points = 0;
-      
-      // Passing stats
-      points += (statMap['4'] || 0) * 0.04;  // Passing yards (1 point per 25 yards)
-      points += (statMap['5'] || 0) * 4;     // Passing TDs
-      points -= (statMap['6'] || 0) * 1;     // Interceptions
-      
-      // Rushing stats
-      points += (statMap['9'] || 0) * 0.1;   // Rushing yards (1 point per 10 yards)
-      points += (statMap['10'] || 0) * 6;    // Rushing TDs
-      
-      // Receiving stats
-      points += (statMap['11'] || 0) * 1;    // Receptions (PPR)
-      points += (statMap['12'] || 0) * 0.1;  // Receiving yards (1 point per 10 yards)
-      points += (statMap['13'] || 0) * 6;    // Receiving TDs
-      
-      // Kicking stats (10 yards per point for field goals)
-      // Estimate field goal yards based on range
-      points += (statMap['29'] || 0) * 1.5;  // FG 0-19 yards (~15 yards = 1.5 pts)
-      points += (statMap['30'] || 0) * 2.5;  // FG 20-29 yards (~25 yards = 2.5 pts)
-      points += (statMap['31'] || 0) * 3.5;  // FG 30-39 yards (~35 yards = 3.5 pts)
-      points += (statMap['32'] || 0) * 4.5;  // FG 40-49 yards (~45 yards = 4.5 pts)
-      points += (statMap['33'] || 0) * 5.5;  // FG 50+ yards (~55 yards = 5.5 pts)
-      points += (statMap['35'] || 0) * 1;    // PAT Made
-      
-      // Other scoring
-      points += (statMap['15'] || 0) * 6;    // Return TDs
-      points += (statMap['16'] || 0) * 2;    // 2-Point Conversions
-      points -= (statMap['18'] || 0) * 2;    // Fumbles Lost
-      points += (statMap['57'] || 0) * 6;    // Offensive Fumble Return TD
+      if (!statsData) {
+        console.warn(`No stats found for player ${playerKey} in week ${week}`);
+        return 0;
+      }
 
-      return Math.round(points * 100) / 100; // Round to 2 decimal places
+      // Parse stats using the scoring service
+      const statMap = this.scoringService.parseYahooStats(statsData);
+      
+      if (Object.keys(statMap).length === 0) {
+        console.warn(`No stat values found for player ${playerKey}`);
+        return 0;
+      }
+
+      // Calculate points using league-specific scoring
+      const points = this.scoringService.calculatePoints(statMap);
+      
+      return points;
     } catch (error) {
-      console.error('Failed to fetch player stats:', error);
-      // Throw the error instead of returning 0 so the Fantasy component can handle it
+      console.error(`Failed to fetch stats for player ${playerKey}:`, error);
       throw error;
     }
+  }
+
+  async getPlayerStatsWithDetails(playerKey: string, week: number): Promise<{ points: number; stats: string }> {
+    try {
+      // Ensure scoring settings are loaded
+      if (!this.scoringService.isLoaded()) {
+        await this.scoringService.loadLeagueSettings(this.leagueId);
+      }
+
+      const data = await this.fetchYahoo('player-week', { 
+        playerKey, 
+        week: week.toString() 
+      });
+      
+      // Parse the player stats response based on Yahoo API structure
+      const playerArray = data.fantasy_content?.player;
+      if (!playerArray || playerArray.length === 0) {
+        console.warn(`No player data found for ${playerKey}`);
+        return { points: 0, stats: '—' };
+      }
+
+      // Find player_stats in the array
+      let statsData = null;
+      for (const item of playerArray) {
+        if (item?.player_stats) {
+          statsData = item.player_stats;
+          break;
+        }
+      }
+
+      if (!statsData) {
+        console.warn(`No stats found for player ${playerKey} in week ${week}`);
+        return { points: 0, stats: '—' };
+      }
+
+      // Parse stats using the scoring service
+      const statMap = this.scoringService.parseYahooStats(statsData);
+      
+      if (Object.keys(statMap).length === 0) {
+        console.warn(`No stat values found for player ${playerKey}`);
+        return { points: 0, stats: '—' };
+      }
+
+      // Calculate points using league-specific scoring
+      const points = this.scoringService.calculatePoints(statMap);
+      
+      // Format stats for display (similar to Yahoo's format)
+      const statsString = this.formatStatsForDisplay(statMap);
+      
+      return { points, stats: statsString };
+    } catch (error) {
+      console.error(`Failed to fetch stats for player ${playerKey}:`, error);
+      return { points: 0, stats: '—' };
+    }
+  }
+
+  private formatStatsForDisplay(statMap: Record<string, number>): string {
+    const stats: string[] = [];
+    
+    // Common stat mappings (you may need to adjust these based on your league settings)
+    const statLabels: Record<string, string> = {
+      'passing_yards': 'Pass Yds',
+      'passing_touchdowns': 'Pass TD',
+      'passing_interceptions': 'Int',
+      'passing_2pt_conversions': '2-PT',
+      'rushing_yards': 'Rush Yds',
+      'rushing_touchdowns': 'Rush TD',
+      'rushing_2pt_conversions': '2-PT',
+      'receiving_yards': 'Rec Yds',
+      'receiving_touchdowns': 'Rec TD',
+      'receiving_receptions': 'Rec',
+      'receiving_2pt_conversions': '2-PT',
+      'field_goals_0_19': 'FG 0-19',
+      'field_goals_20_29': 'FG 20-29',
+      'field_goals_30_39': 'FG 30-39',
+      'field_goals_40_49': 'FG 40-49',
+      'field_goals_50_plus': 'FG 50+',
+      'field_goals_made': 'FG Made',
+      'field_goals_attempted': 'FG Att',
+      'extra_points_made': 'PAT Made',
+      'extra_points_attempted': 'PAT Att',
+      'defense_sacks': 'Sack',
+      'defense_interceptions': 'Int',
+      'defense_fumble_recoveries': 'Fum Rec',
+      'defense_touchdowns': 'TD',
+      'defense_safeties': 'Safety',
+      'defense_points_allowed_0': 'PA 0',
+      'defense_points_allowed_1_6': 'PA 1-6',
+      'defense_points_allowed_7_13': 'PA 7-13',
+      'defense_points_allowed_14_20': 'PA 14-20',
+      'defense_points_allowed_21_27': 'PA 21-27',
+      'defense_points_allowed_28_34': 'PA 28-34',
+      'defense_points_allowed_35_plus': 'PA 35+',
+    };
+
+    // Add stats that have values > 0
+    for (const [statKey, value] of Object.entries(statMap)) {
+      if (value > 0) {
+        const label = statLabels[statKey] || statKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        stats.push(`${value} ${label}`);
+      }
+    }
+
+    return stats.length > 0 ? stats.join(', ') : '—';
   }
 }
