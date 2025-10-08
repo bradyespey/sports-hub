@@ -6,7 +6,8 @@ import { NFLNavigation } from '@/components/NFLNavigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ExternalLink } from 'lucide-react';
+import { Loader2, ExternalLink, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { Team } from '@/types/teams';
 import { sortTeamsInDivision } from '@/lib/nflTiebreaking';
@@ -15,8 +16,24 @@ export const NFLTeams = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const teamsProvider = ProviderFactory.createTeamsProvider();
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTooltip) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-tooltip-trigger]')) {
+          setShowTooltip(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTooltip]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -139,10 +156,15 @@ export const NFLTeams = () => {
                       {team.abbreviation}
                     </span>
                     {team.record && (
-                      <Badge variant="secondary" className="text-xs">
-                        {team.record.wins}-{team.record.losses}
-                        {team.record.ties > 0 && `-${team.record.ties}`}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {team.record.wins}-{team.record.losses}
+                          {team.record.ties > 0 && `-${team.record.ties}`}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {team.record.winPercentage.toFixed(3)}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -177,8 +199,56 @@ export const NFLTeams = () => {
       
       <div className="container mx-auto px-4 py-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">NFL Teams</h1>
-          <p className="text-muted-foreground">Team information, depth charts, and stats from ESPN</p>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h1 className="text-3xl font-bold">NFL Teams</h1>
+            {/* Helper Tooltip */}
+            <Tooltip open={showTooltip} onOpenChange={() => {}}>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowTooltip(!showTooltip)}
+                  data-tooltip-trigger
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-3 z-[9999]">
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm">Quick Tips</p>
+                    <div className="text-xs space-y-0.5">
+                      <p>• Team information, depth charts, and player stats</p>
+                      <p>• Division standings and records</p>
+                      <p>• Links to ESPN depth charts</p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-2 space-y-1">
+                    <p className="font-semibold text-sm">Teams Features</p>
+                    <div className="text-xs space-y-0.5">
+                      <p>• Click team names for detailed rosters</p>
+                      <p>• View current season records</p>
+                      <p>• Access ESPN depth charts</p>
+                      <p>• AFC/NFC division organization</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-2 space-y-1">
+                    <p className="font-semibold text-sm">Standings Order</p>
+                    <div className="text-xs space-y-0.5">
+                      <p>• Teams ordered by NFL tiebreaking procedures</p>
+                      <p>• Win percentage is primary criteria</p>
+                      <p>• Division records break ties</p>
+                      <p>• Point differential as final tiebreaker</p>
+                    </div>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <p className="text-muted-foreground text-center">Team information, depth charts, and stats from ESPN</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

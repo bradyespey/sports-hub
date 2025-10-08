@@ -16,7 +16,8 @@ import { OddsRefreshButton } from '@/components/OddsRefreshButton';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 import { getCurrentNFLWeek, isCurrentNFLWeek } from '@/lib/dayjs';
 import { getTeamName } from '@/lib/teamNames';
-import { ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export const NFLScoreboard = () => {
   const { user, loading } = useAuth();
@@ -25,7 +26,7 @@ export const NFLScoreboard = () => {
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [pendingPicks, setPendingPicks] = useState<Record<string, string>>({});
   const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
-  const [showPickRules, setShowPickRules] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   const [teams, setTeams] = useState<Record<string, Team>>({});
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
 
@@ -94,6 +95,21 @@ export const NFLScoreboard = () => {
     const currentWeekNumber = getCurrentNFLWeek();
     setSelectedWeek(currentWeekNumber);
   }, []);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTooltip) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-tooltip-trigger]')) {
+          setShowTooltip(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTooltip]);
 
   // Fetch teams data once on component mount
   useEffect(() => {
@@ -397,6 +413,43 @@ export const NFLScoreboard = () => {
                     Current Week
                   </Button>
                 )}
+                {/* Helper Tooltip */}
+                <Tooltip open={showTooltip} onOpenChange={() => {}}>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowTooltip(!showTooltip)}
+                      data-tooltip-trigger
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs p-3 z-[9999]">
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <p className="font-semibold text-sm">Quick Tips</p>
+                        <div className="text-xs space-y-0.5">
+                          <p>• Picks auto-save when selected</p>
+                          <p>• Change picks until kickoff</p>
+                          <p>• Reveals after both players pick + kickoff</p>
+                          <p>• Odds update daily + manual refresh available</p>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t pt-2 space-y-1">
+                        <p className="font-semibold text-sm">Pick Rules</p>
+                        <div className="text-xs space-y-0.5">
+                          <p>• Click "Pick" next to your chosen team</p>
+                          <p>• Click team names to view depth charts</p>
+                          <p>• Strategic reveals: both pick + kickoff</p>
+                          <p>• Late picks: 1-minute edit window</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
                 {Object.keys(pendingPicks).length > 0 && (
@@ -437,51 +490,6 @@ export const NFLScoreboard = () => {
             </div>
           </div>
         </div>
-
-        {/* Pick Rules Info */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mt-0.5">
-                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <button
-                  onClick={() => setShowPickRules(!showPickRules)}
-                  className="flex items-center justify-between w-full text-left hover:opacity-75 transition-opacity p-1 -m-1 rounded"
-                >
-                  <h3 className="font-semibold text-sm">How Picks Work</h3>
-                  {showPickRules ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {showPickRules && (
-                  <div className="text-sm text-muted-foreground space-y-1 mt-3">
-                    <p>• <strong>Make your picks:</strong> Click "Pick" next to your chosen team for each game</p>
-                    <p>• <strong>Research teams:</strong> Click on any team name to view their depth chart and roster</p>
-                    <p>• <strong>Change anytime:</strong> You can modify picks up until kickoff for each game</p>
-                    <p>• <strong>Strategic reveals:</strong> Picks are only revealed after both players submit AND kickoff occurs</p>
-                    <p>• <strong>Auto-save:</strong> Picks save automatically when you select them</p>
-                    <div className="mt-3 pt-3 border-t border-muted">
-                      <p className="font-medium text-foreground mb-2">🕒 Pick Timing Scenarios</p>
-                      <p>• <strong>Before kickoff, no picks:</strong> No picks shown, both can pick freely</p>
-                      <p>• <strong>Before kickoff, both picked:</strong> No picks shown, both can edit until kickoff</p>
-                      <p>• <strong>After kickoff, Brady hasn't picked:</strong> No picks shown, Brady can make late pick</p>
-                      <p>• <strong>After kickoff, Jenny hasn't picked:</strong> No picks shown, Jenny can make late pick</p>
-                      <p>• <strong>After kickoff, late picks made:</strong> 1-minute edit window from last late pick, then picks locked and shown</p>
-                      <p>• <strong>After kickoff, both picked before:</strong> Picks shown immediately at kickoff</p>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-muted">
-                      <p className="font-medium text-foreground mb-2">📊 Betting Odds</p>
-                      <p>• <strong>Daily updates:</strong> Odds refresh automatically once per day</p>
-                      <p>• <strong>Manual refresh:</strong> Use "Update Odds" button for latest lines anytime</p>
-                      <p>• <strong>API limits:</strong> 500 free requests/month, so manual updates are limited</p>
-                      <p>• <strong>Last updated:</strong> Check timestamp next to the refresh button</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Games - Sorted like Yahoo: Live, Upcoming, Finished */}
         <div className="space-y-6">

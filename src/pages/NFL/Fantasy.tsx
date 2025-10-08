@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Users, BarChart3 } from 'lucide-react';
+import { Trophy, Users, BarChart3, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FantasyProviderFactory } from '@/providers/fantasy/FantasyProviderFactory';
 import { getCurrentNFLWeek, isCurrentNFLWeek } from '@/lib/dayjs';
 
@@ -69,6 +70,7 @@ const projectionCache = new Map<string, number>(); // key: playerKey, value: pro
 export const NFLFantasy = () => {
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
+  const [showTooltip, setShowTooltip] = useState(false);
   const [leagueName, setLeagueName] = useState('Fantasy League');
   const [myTeam, setMyTeam] = useState<MatchupTeam | null>(null);
   const [myRoster, setMyRoster] = useState<PlayerData[]>([]);
@@ -77,6 +79,21 @@ export const NFLFantasy = () => {
   const [allMatchups, setAllMatchups] = useState<LeagueMatchup[]>([]);
   const [weekCache, setWeekCache] = useState<Map<number, WeekCache>>(new Map());
   const availableWeeks = Array.from({ length: 18 }, (_, i) => i + 1);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTooltip) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-tooltip-trigger]')) {
+          setShowTooltip(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTooltip]);
 
   // Initialize to current NFL week on mount
   useEffect(() => {
@@ -1154,6 +1171,42 @@ export const NFLFantasy = () => {
               Current Week
             </Button>
           )}
+          {/* Helper Tooltip */}
+          <Tooltip open={showTooltip} onOpenChange={() => {}}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setShowTooltip(!showTooltip)}
+                data-tooltip-trigger
+              >
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs p-3 z-[9999]">
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">Quick Tips</p>
+                  <div className="text-xs space-y-0.5">
+                    <p>• View your team roster and stats</p>
+                    <p>• Check live matchup scores</p>
+                    <p>• See all league matchups</p>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-2 space-y-1">
+                  <p className="font-semibold text-sm">Fantasy Features</p>
+                  <div className="text-xs space-y-0.5">
+                    <p>• Individual player fantasy points</p>
+                    <p>• Detailed game statistics</p>
+                    <p>• Rolling average projections</p>
+                    <p>• Real-time stat updates</p>
+                  </div>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Page Header */}

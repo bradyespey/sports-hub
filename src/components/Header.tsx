@@ -18,7 +18,7 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
-        <Link to="/nfl" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+        <Link to="/nfl/scoreboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
             <Trophy className="w-6 h-6 text-primary-foreground" />
           </div>

@@ -109,20 +109,23 @@ Manual deploy: Push to GitHub `main` branch
 
 ## App Pages / Routes
 
-- **/** — NFL index page with quick summary and navigation
-- **/nfl/scoreboard** — Main picks interface with live scores and odds
-- **/nfl/standings** — Weekly and season standings between Brady and Jenny
+- **/** — Redirects directly to Scores page
+- **/nfl/scoreboard** — Main picks interface with live scores and odds (default landing page)
 - **/nfl/fantasy** — Yahoo Fantasy Football team roster and matchups (when enabled)
-- **/nfl/teams** — Team directory with logos, divisions, records, and depth chart links
+- **/nfl/standings** — Weekly and season standings between Brady and Jenny
+- **/nfl/teams** — Team directory with logos, divisions, records, win percentages, and depth chart links
 - **/nfl/teams/:teamId** — Individual team depth charts (offense, defense, special teams)
 
 ### Navigation Features
 - **Week Selector**: Navigate between NFL weeks with current week highlighting
 - **Sticky Navigation**: NFL nav bar stays fixed when scrolling
 - **Current Week Button**: Quick navigation back to current week from past/future weeks
+- **Interactive Tooltips**: Click-only help tooltips on each page with page-specific guidance
+- **Page Order**: Scores → Fantasy → Standings → Teams (reorganized for better UX)
 
 ### Team Records & Standings
 - **Live Records**: Real-time team records displayed on Scores and Teams pages
+- **Win Percentages**: Displayed alongside win-loss records using NFL tiebreaking calculations
 - **NFL Tiebreaking**: Official NFL tiebreaking procedures for division standings
 - **Preseason Handling**: Alphabetical sorting for 0-0 records before season starts
 - **Conference Layout**: AFC divisions on left, NFC divisions on right

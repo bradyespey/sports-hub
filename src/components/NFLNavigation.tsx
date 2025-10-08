@@ -26,8 +26,8 @@ export const NFLNavigation = ({ onScoresClick }: NFLNavigationProps) => {
 
   const navItems = [
     { label: 'SCORES', path: '/nfl/scoreboard', onClick: handleScoresClick },
-    { label: 'STANDINGS', path: '/nfl/standings' },
     ...(fantasyEnabled ? [{ label: 'FANTASY', path: '/nfl/fantasy' }] : []),
+    { label: 'STANDINGS', path: '/nfl/standings' },
     { label: 'TEAMS', path: '/nfl/teams' },
   ];
 

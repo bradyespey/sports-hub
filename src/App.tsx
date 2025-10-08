@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthGuard } from "@/components/AuthGuard";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { CurrentWeek } from "@/pages/CurrentWeek";
-import { NFLIndex } from "@/pages/NFL/Index";
 import { NFLScoreboard } from "@/pages/NFL/Scoreboard";
 import { NFLTeams } from "@/pages/NFL/Teams";
 import { NFLTeamDetail } from "@/pages/NFL/TeamDetail";
@@ -25,11 +24,10 @@ const App = () => (
         <BrowserRouter>
           <AuthGuard>
             <Routes>
-              {/* Root redirects to NFL */}
-              <Route path="/" element={<Navigate to="/nfl" replace />} />
+              {/* Root redirects to Scores */}
+              <Route path="/" element={<Navigate to="/nfl/scoreboard" replace />} />
               
               {/* NFL Routes */}
-              <Route path="/nfl" element={<NFLIndex />} />
               <Route path="/nfl/scoreboard" element={<NFLScoreboard />} />
               <Route path="/nfl/teams" element={<NFLTeams />} />
               <Route path="/nfl/teams/:teamId" element={<NFLTeamDetail />} />

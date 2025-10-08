@@ -13,6 +13,8 @@ import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
 import { getCurrentNFLWeek, isCurrentNFLWeek } from '@/lib/dayjs';
+import { HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export const NFLStandings = () => {
   const { user, loading } = useAuth();
@@ -20,8 +22,24 @@ export const NFLStandings = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [picks, setPicks] = useState<Record<string, Pick>>({});
   const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
+  const [showTooltip, setShowTooltip] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTooltip) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-tooltip-trigger]')) {
+          setShowTooltip(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTooltip]);
 
   const scoresProvider = ProviderFactory.createScoresProvider();
 
@@ -196,6 +214,42 @@ export const NFLStandings = () => {
               Current Week
             </Button>
           )}
+          {/* Helper Tooltip */}
+          <Tooltip open={showTooltip} onOpenChange={() => {}}>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setShowTooltip(!showTooltip)}
+                data-tooltip-trigger
+              >
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs p-3 z-[9999]">
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm">Quick Tips</p>
+                  <div className="text-xs space-y-0.5">
+                    <p>• League standings and playoff picture</p>
+                    <p>• Weekly win/loss tracking</p>
+                    <p>• Season-long competition results</p>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-2 space-y-1">
+                  <p className="font-semibold text-sm">Standings Features</p>
+                  <div className="text-xs space-y-0.5">
+                    <p>• Brady vs Jenny weekly records</p>
+                    <p>• Overall season standings</p>
+                    <p>• Pick accuracy tracking</p>
+                    <p>• Week-by-week comparison</p>
+                  </div>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
         </div>
         
         {/* Page Header */}
