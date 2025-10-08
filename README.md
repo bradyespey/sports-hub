@@ -4,7 +4,7 @@
 
 ## Overview
 
-A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts, real-time standings calculation, and NFL tiebreaking procedures.
+A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, Yahoo Fantasy Football integration, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts, real-time standings calculation, and NFL tiebreaking procedures.
 
 ## Live and Admin
 
@@ -19,7 +19,7 @@ A modern, mobile-first NFL picks application enabling Brady and Jenny to compete
 
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
 - **Backend**: Firebase Auth + Firestore + Netlify Functions
-- **APIs**: ESPN API (scores/teams), The Odds API (betting lines)
+- **APIs**: ESPN API (scores/teams), The Odds API (betting lines), Yahoo Fantasy API
 - **Deployment**: Netlify with continuous integration
 - **Automation**: GitHub Actions for daily odds refresh
 - **Domain**: sportshub.theespeys.com via Cloudflare DNS
@@ -56,12 +56,25 @@ VITE_ALLOWED_EMAILS=YOUR_EMAIL@gmail.com,PARTNER_EMAIL@gmail.com
 VITE_ODDS_API_KEY=YOUR_ODDS_API_KEY
 VITE_USE_MOCK=false
 
+# Yahoo Fantasy Football
+VITE_FANTASY_PROVIDER=yahoo
+VITE_YAHOO_LEAGUE_ID=590446
+VITE_YAHOO_TEAM_NAME=Espeys in the Endzone
+
 # Netlify Functions (Server-side)
 FIREBASE_PROJECT_ID=sportshub-9dad7
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@sportshub-9dad7.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
 ODDS_API_KEY=YOUR_ODDS_API_KEY
+
+# Yahoo OAuth (Get from https://developer.yahoo.com/apps/)
+YAHOO_CLIENT_ID=YOUR_YAHOO_CLIENT_ID
+YAHOO_CLIENT_SECRET=YOUR_YAHOO_CLIENT_SECRET
+YAHOO_REFRESH_TOKEN=YOUR_YAHOO_REFRESH_TOKEN
+YAHOO_REDIRECT_URI=http://localhost:8888/.netlify/functions/yahoo-auth-callback
 ```
+
+**Note**: See `YAHOO_FANTASY_SETUP.md` for detailed Yahoo Fantasy integration setup instructions.
 
 ## Run Modes
 
@@ -99,6 +112,7 @@ Manual deploy: Push to GitHub `main` branch
 - **/** — NFL index page with quick summary and navigation
 - **/nfl/scoreboard** — Main picks interface with live scores and odds
 - **/nfl/standings** — Weekly and season standings between Brady and Jenny
+- **/nfl/fantasy** — Yahoo Fantasy Football team roster and matchups (when enabled)
 - **/nfl/teams** — Team directory with logos, divisions, records, and depth chart links
 - **/nfl/teams/:teamId** — Individual team depth charts (offense, defense, special teams)
 
@@ -134,7 +148,11 @@ SportsHub/
 ├── netlify/
 │   └── functions/         # Server-side functions
 │       ├── odds_refresh.ts # Odds fetching logic
-│       └── daily_odds.ts  # Scheduled automation
+│       ├── daily_odds.ts  # Scheduled automation
+│       ├── yahoo-fantasy.ts # Yahoo Fantasy API proxy
+│       ├── yahoo-auth.ts  # Yahoo OAuth authentication
+│       ├── yahoo-auth-callback.ts # Yahoo OAuth callback handler
+│       └── yahoo-manual-token.ts # Yahoo token refresh utility
 ├── scripts/               # Data seeding and utilities
 └── docs/                  # Project documentation (archived)
 ```
@@ -168,12 +186,47 @@ SportsHub/
    - Check Firestore security rules for proper user isolation
    - Verify game status and kickoff times
 
+6. **Yahoo Fantasy Integration Issues**
+   - Verify Yahoo OAuth credentials are valid and not expired
+   - Check league ID and team name match your Yahoo Fantasy league
+   - Use manual token refresh at `http://localhost:8888/.netlify/functions/yahoo-manual-token`
+   - Ensure `VITE_FANTASY_PROVIDER=yahoo` is set in environment variables
+
+## Fantasy Football Integration
+
+The app integrates with Yahoo Fantasy Football to display:
+- Team roster with player stats and positions
+- Live matchup scores during games
+- All league matchups for the current week
+- Projected vs actual points
+
+**Setup**: See `YAHOO_FANTASY_SETUP.md` for complete integration instructions.
+
+**Features**:
+- Read-only access via Yahoo OAuth
+- Automatic token refresh
+- Real-time updates during games
+- Conditional display (only shows when `VITE_FANTASY_PROVIDER=yahoo`)
+
 ## Next Steps / Future Work
 
 ### 🏈 Advanced Features (Priority 3)
-- **Fantasy Integration**: Add Yahoo Fantasy Football dashboard card showing matchup
+- **Fantasy Enhancements**: Historical matchups, league standings integration
 - **NCAAF Support**: Add college football league support
 - **Multi-User Support**: Expand beyond Brady and Jenny (future)
+
+## Future Fantasy Enhancements
+
+Possible additions if you want more features:
+- Historical week matchups
+- League standings integration
+- Player add/drop notifications (would require write access)
+- Projected vs actual points charts
+- Integration with NFL Picks standings
+
+## Documentation
+
+All project documentation should be placed in the `/docs` subfolder for organization.
 
 ## AI Handoff
 

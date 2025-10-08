@@ -2,10 +2,13 @@
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, Users, BarChart3 } from 'lucide-react';
+import { Trophy, Users, BarChart3, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { FantasyProviderFactory } from '@/providers/fantasy/FantasyProviderFactory';
 
 export const NFLIndex = () => {
+  const fantasyEnabled = FantasyProviderFactory.isEnabled();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -56,6 +59,30 @@ export const NFLIndex = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {fantasyEnabled && (
+            <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <span>Fantasy Football</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Espeys in the Endzone - Double Coverage League
+                </p>
+                <div className="text-xs text-muted-foreground mb-4 space-y-1">
+                  <p>• View your team roster and stats</p>
+                  <p>• Check live matchup scores</p>
+                  <p>• See all league matchups</p>
+                </div>
+                <Button asChild variant="default" className="w-full">
+                  <Link to="/nfl/fantasy">View Fantasy Team</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

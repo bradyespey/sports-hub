@@ -11,6 +11,7 @@ import { NFLScoreboard } from "@/pages/NFL/Scoreboard";
 import { NFLTeams } from "@/pages/NFL/Teams";
 import { NFLTeamDetail } from "@/pages/NFL/TeamDetail";
 import { NFLStandings } from "@/pages/NFL/Standings";
+import { NFLFantasy } from "@/pages/NFL/Fantasy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/nfl/teams/:teamId" element={<NFLTeamDetail />} />
               <Route path="/nfl/schedule" element={<NFLScoreboard />} /> {/* Same as scoreboard for now */}
               <Route path="/nfl/standings" element={<NFLStandings />} />
+              <Route path="/nfl/fantasy" element={<NFLFantasy />} />
               
               {/* Legacy route for backward compatibility */}
               <Route path="/current-week" element={<CurrentWeek />} />
