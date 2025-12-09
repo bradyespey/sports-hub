@@ -21,10 +21,11 @@ Now features a **Public Demo Mode** that allows visitors to explore the full app
 
 ### Public Demo Mode
 Visitors can access the site without logging in to experience the full UI:
-- **Real-Time Data**: Fetches actual NFL schedules, scores, and odds from ESPN and The Odds API.
-- **Privacy First**: Masks real user identities as "User 1" and "User 2".
-- **Mock Interaction**: "User 1" (you) can make local-only picks to test the interface, while "User 2" (opponent) has pre-filled mock picks.
-- **Full Scope**: Includes demo versions of the Scoreboard, Standings, and Fantasy pages.
+- **Real-Time Data**: Uses realistic mock NFL schedules with proper team abbreviations for logo display
+- **Privacy First**: Masks real user identities as "User 1" and "User 2"
+- **Mock Interaction**: "User 1" (visitor) can make local-only picks to test the interface, while "User 2" (opponent) has pre-filled mock picks
+- **Full Scope**: Includes demo versions of the Scoreboard (16 games with Live/Upcoming/Final statuses), Standings, and Fantasy pages
+- **Team Logos**: All team logos display correctly using standard NFL abbreviations (BAL, KC, PHI, etc.)
 
 ### Core Features
 - **Strategic Picks**: Picks are hidden until kickoff or until both users have picked.

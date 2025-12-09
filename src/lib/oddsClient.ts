@@ -9,6 +9,13 @@ export interface OddsRefreshResult {
   note?: string;
 }
 
+/**
+ * Manually triggers an odds refresh for a specific season and week.
+ * @param {number} season - The NFL season year
+ * @param {number} week - The week number to refresh
+ * @returns {Promise<OddsRefreshResult>} Result containing update statistics
+ * @throws {Error} If the refresh request fails
+ */
 export async function refreshOddsNow(season: number, week: number): Promise<OddsRefreshResult> {
   // For development, try production URL as fallback since local Netlify dev can be complex
   const functionsUrl = import.meta.env.DEV 
@@ -29,6 +36,12 @@ export async function refreshOddsNow(season: number, week: number): Promise<Odds
   return res.json();
 }
 
+/**
+ * Retrieves the timestamp of the last odds update for a specific week.
+ * @param {number} season - The NFL season year
+ * @param {number} week - The week number to check
+ * @returns {Promise<Date | null>} The last update timestamp, or null if no update exists
+ */
 export async function getLastOddsUpdate(season: number, week: number): Promise<Date | null> {
   const { doc, getDoc } = await import('firebase/firestore');
   const { db } = await import('./firebase');
