@@ -50,35 +50,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md game-card">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-primary flex items-center justify-center">
-              <Trophy className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Espey Pick'em</CardTitle>
-            <CardDescription>
-              NFL picks for Brady & Jenny
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button 
-              onClick={signInWithGoogle}
-              className="w-full"
-              variant="default"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              Sign in with Google
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!isAllowed) {
+  if (user && !isAllowed) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md game-card">

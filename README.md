@@ -6,6 +6,8 @@
 
 A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, Yahoo Fantasy Football integration, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts, real-time standings calculation, and NFL tiebreaking procedures.
 
+Now features a **Public Demo Mode** that allows visitors to explore the full application functionality with real-time data but mocked user information.
+
 ## Live and Admin
 
 - **App URL**: https://sportshub.theespeys.com
@@ -14,6 +16,21 @@ A modern, mobile-first NFL picks application enabling Brady and Jenny to compete
 - **Netlify Dashboard**: https://app.netlify.com/sites/espeysportshub
 - **The Odds API**: https://the-odds-api.com/account (500 credits/month free)
 - **GitHub Actions**: Automated daily odds refresh at 2 AM CDT
+
+## Features & Demo Mode
+
+### Public Demo Mode
+Visitors can access the site without logging in to experience the full UI:
+- **Real-Time Data**: Fetches actual NFL schedules, scores, and odds from ESPN and The Odds API.
+- **Privacy First**: Masks real user identities as "User 1" and "User 2".
+- **Mock Interaction**: "User 1" (you) can make local-only picks to test the interface, while "User 2" (opponent) has pre-filled mock picks.
+- **Full Scope**: Includes demo versions of the Scoreboard, Standings, and Fantasy pages.
+
+### Core Features
+- **Strategic Picks**: Picks are hidden until kickoff or until both users have picked.
+- **Live Updates**: Real-time scores and game status.
+- **Yahoo Fantasy**: Integrated fantasy football roster and matchup viewing.
+- **Depth Charts**: Detailed team rosters and depth charts.
 
 ## Tech Stack
 

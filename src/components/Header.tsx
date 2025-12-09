@@ -1,6 +1,6 @@
 // src/components/Header.tsx
 import { Link } from 'react-router-dom';
-import { Trophy, User, LogOut, Sun, Moon, Monitor } from 'lucide-react';
+import { Trophy, User, LogOut, LogIn, Sun, Moon, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from './ThemeProvider';
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signInWithGoogle, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
 
   return (
@@ -31,6 +31,11 @@ export const Header = () => {
         </Link>
 
         <div className="flex items-center space-x-2">
+          {!user && (
+            <span className="hidden sm:inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 mr-2">
+              Demo Mode
+            </span>
+          )}
           {/* Theme Toggle */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -57,20 +62,32 @@ export const Header = () => {
           </DropdownMenu>
 
           {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline">{user?.displayName}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={signOut} className="text-destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">{user.displayName}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={signOut} className="text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center space-x-2"
+              onClick={signInWithGoogle}
+            >
+              <LogIn className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign In</span>
+            </Button>
+          )}
         </div>
       </div>
     </header>

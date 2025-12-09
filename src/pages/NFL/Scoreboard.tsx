@@ -9,6 +9,7 @@ import { GameCard } from '@/components/GameCard';
 import { WeekSelector } from '@/components/WeekSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Game, Pick, Week } from '@/types';
 import { Team } from '@/types/teams';
 import { ProviderFactory } from '@/providers/ProviderFactory';
@@ -371,21 +372,9 @@ export const NFLScoreboard = () => {
     );
   }
 
+  // Demo mode: when not signed in, show a read-only demo scoreboard
   if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-96">
-          <CardHeader>
-            <CardTitle className="text-center">Please sign in</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">
-              You need to be signed in to view picks and scores.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <DemoScoreboard />;
   }
 
   return (
@@ -625,6 +614,323 @@ export const NFLScoreboard = () => {
           )}
         </div>
 
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// Demo Scoreboard (public, read-only with mock picks)
+// ─────────────────────────────────────────────────────────────
+
+const demoUserId = 'demo-user-1';
+const demoOpponentId = 'demo-user-2';
+
+const DemoScoreboard = () => {
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
+  const [games, setGames] = useState<Game[]>([]);
+  const [teams, setTeams] = useState<Record<string, Team>>({});
+  // Local state for User 1's picks
+  const [userPicks, setUserPicks] = useState<Record<string, string>>({});
+  // Mock picks for User 2 (opponent)
+  const [opponentPicks, setOpponentPicks] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  const availableWeeks = Array.from({ length: 22 }, (_, i) => i + 1);
+
+  const scoresProvider = ProviderFactory.createScoresProvider();
+  const teamsProvider = ProviderFactory.createTeamsProvider();
+
+  // Helper function to get team abbreviation for URL (copied from Scoreboard)
+  const getTeamAbbreviation = (teamName: string): string => {
+    const teamAbbreviations: Record<string, string> = {
+      'Cardinals': 'ari', 'Falcons': 'atl', 'Ravens': 'bal', 'Bills': 'buf',
+      'Panthers': 'car', 'Bears': 'chi', 'Bengals': 'cin', 'Browns': 'cle',
+      'Cowboys': 'dal', 'Broncos': 'den', 'Lions': 'det', 'Packers': 'gb',
+      'Texans': 'hou', 'Colts': 'ind', 'Jaguars': 'jax', 'Chiefs': 'kc',
+      'Raiders': 'lv', 'Chargers': 'lac', 'Rams': 'lar', 'Dolphins': 'mia',
+      'Vikings': 'min', 'Patriots': 'ne', 'Saints': 'no', 'Giants': 'nyg',
+      'Jets': 'nyj', 'Eagles': 'phi', 'Steelers': 'pit', '49ers': 'sf',
+      'Seahawks': 'sea', 'Buccaneers': 'tb', 'Titans': 'ten', 'Commanders': 'was'
+    };
+    return teamAbbreviations[teamName] || teamName.toLowerCase().replace(/\s+/g, '-');
+  };
+
+  // Fetch teams data once
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const teamsData = await teamsProvider.getAllTeams();
+        const teamsMap: Record<string, Team> = {};
+        teamsData.forEach(team => {
+          teamsMap[team.abbreviation] = team;
+        });
+        setTeams(teamsMap);
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
+    };
+    fetchTeams();
+  }, []);
+
+  // Fetch records for week
+  useEffect(() => {
+    const fetchRecordsForWeek = async () => {
+      if (games.length === 0 || Object.keys(teams).length === 0) return;
+
+      const weekTeams = new Set<string>();
+      games.forEach(game => {
+        weekTeams.add(game.homeTeam);
+        weekTeams.add(game.awayTeam);
+      });
+
+      const teamRecordPromises = Array.from(weekTeams).map(async (teamName) => {
+        const teamAbbreviation = getTeamAbbreviation(getTeamName(teamName)).toUpperCase();
+        const team = teams[teamAbbreviation];
+        if (team && !team.record) {
+          const teamWithRecord = await teamsProvider.getTeam(team.id);
+          if (teamWithRecord?.record) {
+            setTeams(prev => ({
+              ...prev,
+              [teamAbbreviation]: { ...prev[teamAbbreviation], record: teamWithRecord.record }
+            }));
+          }
+        }
+      });
+
+      await Promise.all(teamRecordPromises);
+    };
+
+    fetchRecordsForWeek();
+  }, [games, teams]);
+
+  // Fetch games and generate mock picks
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch schedule for selected week
+        const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
+        
+        // Get cached odds and scores
+        const [oddsMap, scores] = await Promise.all([
+          getCachedOddsForGames(schedule),
+          scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) })
+        ]);
+        
+        // Merge data
+        const gamesData = schedule.map(game => 
+          mergeGameWithOddsAndScores(game, oddsMap, scores)
+        );
+
+        setGames(gamesData);
+
+        // Generate deterministic mock picks for User 2 (Opponent)
+        // We'll pick the favorite if spread exists, otherwise random based on gameId char code
+        const mockOpponentPicks: Record<string, string> = {};
+        gamesData.forEach(game => {
+            if (game.sportsbook?.spreadHome) {
+                // Pick favorite
+                mockOpponentPicks[game.gameId] = game.sportsbook.spreadHome < 0 ? game.homeTeam : game.awayTeam;
+            } else {
+                // Deterministic "random" pick
+                const charCode = game.gameId.charCodeAt(game.gameId.length - 1);
+                mockOpponentPicks[game.gameId] = charCode % 2 === 0 ? game.homeTeam : game.awayTeam;
+            }
+        });
+        setOpponentPicks(mockOpponentPicks);
+
+        // Reset User 1 picks on week change (or keep in state if we want persistence across week tabs in same session, 
+        // but simple reset is fine for demo)
+        setUserPicks({});
+
+      } catch (error) {
+        console.error('Error fetching demo data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedWeek]);
+
+  const handlePickChange = (gameId: string, selection: string) => {
+    setUserPicks((prev) => ({ ...prev, [gameId]: selection }));
+  };
+
+  const totalGames = games.length;
+  const userPickCount = Object.keys(userPicks).length;
+  const opponentPickCount = Object.keys(opponentPicks).length;
+
+  const resetToCurrentWeek = () => {
+    const currentWeekNumber = getCurrentNFLWeek();
+    setSelectedWeek(currentWeekNumber);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <NFLNavigation onScoresClick={resetToCurrentWeek} />
+      <div className="container mx-auto px-4 py-4 space-y-4">
+        {/* Demo banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-blue-500 text-blue-600">
+              Demo Mode
+            </Badge>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Public demo: you are <span className="font-semibold">User 1</span>. User 2&apos;s picks are
+              mocked for demonstration.
+            </p>
+          </div>
+        </div>
+
+        {/* Week Selector */}
+        <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
+          <div className="flex flex-col space-y-3 overflow-hidden">
+            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+              <div className="flex flex-col items-center space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+                <WeekSelector
+                  currentWeek={selectedWeek}
+                  onWeekChange={setSelectedWeek}
+                  availableWeeks={availableWeeks}
+                />
+                <Button
+                  onClick={resetToCurrentWeek}
+                  variant="outline"
+                  size="sm"
+                  className="text-sm"
+                >
+                  Current Week
+                </Button>
+                {/* Add OddsRefreshButton purely for visual parity, even if it just re-fetches or does nothing significant in demo */}
+                 <OddsRefreshButton
+                  season={2025}
+                  week={selectedWeek}
+                  className="w-full sm:w-auto"
+                />
+              </div>
+
+              {/* Picks Counter */}
+              <div className="flex items-center justify-center space-x-6 text-sm">
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-foreground">User 1:</span>
+                  <span
+                    className={`font-bold ${
+                      userPickCount === totalGames && totalGames > 0 ? 'text-green-600' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {userPickCount}/{totalGames}
+                  </span>
+                  <span className="text-muted-foreground">picks</span>
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-foreground">User 2:</span>
+                  <span
+                    className={`font-bold ${
+                      opponentPickCount === totalGames && totalGames > 0 ? 'text-green-600' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {opponentPickCount}/{totalGames}
+                  </span>
+                  <span className="text-muted-foreground">picks</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+            <div className="flex items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        ) : (
+            /* Games */
+            <div className="space-y-6">
+            {(['live', 'scheduled', 'final'] as const).map((status) => {
+                const gamesForStatus = games.filter((g) => g.status === status);
+                if (gamesForStatus.length === 0) return null;
+
+                const title =
+                status === 'live' ? 'Live' : status === 'scheduled' ? 'Upcoming' : 'Finished';
+                const titleClass =
+                status === 'live'
+                    ? 'text-red-600'
+                    : status === 'scheduled'
+                    ? 'text-blue-600'
+                    : 'text-gray-600';
+
+                return (
+                <div key={status}>
+                    {status === 'live' && (
+                        <h2 className="text-lg font-semibold mb-4 text-red-600 flex items-center">
+                            <div className="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                            Live
+                        </h2>
+                    )}
+                    {status !== 'live' && (
+                         <h2 className={`text-lg font-semibold mb-4 ${titleClass}`}>{title}</h2>
+                    )}
+                   
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                    {gamesForStatus.map((game) => {
+                        const userSelection = userPicks[game.gameId];
+                        const opponentSelection = opponentPicks[game.gameId];
+
+                        const userPick: Pick | undefined = userSelection
+                        ? {
+                            gameId: game.gameId,
+                            uid: demoUserId,
+                            selection: userSelection,
+                            createdAt: new Date(),
+                            locked: false,
+                            revealed: status !== 'scheduled', // In demo, just reveal if game started
+                            }
+                        : undefined;
+
+                        const opponentPick: Pick | undefined = opponentSelection
+                        ? {
+                            gameId: game.gameId,
+                            uid: demoOpponentId,
+                            selection: opponentSelection,
+                            createdAt: new Date(),
+                            locked: false,
+                            revealed: status !== 'scheduled',
+                            }
+                        : undefined;
+
+                        // In demo, simpler reveal logic: if game started, show picks
+                        const canReveal = status !== 'scheduled';
+
+                        return (
+                        <div key={game.gameId} data-game-id={game.gameId}>
+                            <GameCard
+                            game={game}
+                            userPick={userPick}
+                            opponentPick={opponentPick}
+                            onPickChange={handlePickChange}
+                            canReveal={canReveal}
+                            currentUserId={demoUserId}
+                            currentUserName="User 1"
+                            opponentUserName="User 2"
+                            teams={teams}
+                            />
+                        </div>
+                        );
+                    })}
+                    </div>
+                </div>
+                );
+            })}
+            
+            {games.length === 0 && (
+                <div className="text-center py-20 text-muted-foreground">
+                    No games scheduled for this week.
+                </div>
+            )}
+            </div>
+        )}
       </div>
     </div>
   );

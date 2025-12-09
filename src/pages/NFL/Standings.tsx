@@ -9,6 +9,7 @@ import { Standings } from '@/components/Standings';
 import { WeekSelector } from '@/components/WeekSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Game, Pick, Week } from '@/types';
 import { ProviderFactory } from '@/providers/ProviderFactory';
 import { getCachedOddsForGames, mergeGameWithOddsAndScores } from '@/lib/oddsHelper';
@@ -177,18 +178,54 @@ export const NFLStandings = () => {
   }
 
   if (!user) {
+    // Demo mode: show sample standings for User 1 vs User 2
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-96">
-          <CardHeader>
-            <CardTitle className="text-center">Please sign in</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">
-              You need to be signed in to view standings.
+      <div className="min-h-screen bg-background">
+        <Header />
+        <NFLNavigation />
+        <div className="container mx-auto px-4 py-6 space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <Badge variant="outline" className="border-blue-500 text-blue-600">
+              Demo Mode
+            </Badge>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Sample standings for <span className="font-semibold">User 1</span> vs{' '}
+              <span className="font-semibold">User 2</span>.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="max-w-2xl mx-auto">
+            <Card className="standings-card">
+              <CardHeader>
+                <CardTitle>Week {selectedWeek} Standings (Demo)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg border bg-muted/50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium">User 1</span>
+                      <Badge variant="outline">Leader</Badge>
+                    </div>
+                    <div className="text-2xl font-bold">11-5</div>
+                    <div className="text-sm text-muted-foreground">68% this week</div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Season: <span className="font-semibold">120-64</span> (65%)
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg border bg-muted/30">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium">User 2</span>
+                    </div>
+                    <div className="text-2xl font-bold">9-7</div>
+                    <div className="text-sm text-muted-foreground">56% this week</div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Season: <span className="font-semibold">112-72</span> (61%)
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
