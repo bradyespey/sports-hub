@@ -626,6 +626,261 @@ export const NFLScoreboard = () => {
 const demoUserId = 'demo-user-1';
 const demoOpponentId = 'demo-user-2';
 
+const demoGamesList: Game[] = [
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G1',
+    homeTeam: 'BAL',
+    awayTeam: 'KC',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 1), // Tomorrow
+    sportsbook: {
+      spreadHome: -3.5,
+      spreadAway: 3.5,
+      total: 51.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G2',
+    homeTeam: 'PHI',
+    awayTeam: 'DAL',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 1.5),
+    sportsbook: {
+      spreadHome: -5.5,
+      spreadAway: 5.5,
+      total: 48.0,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G3',
+    homeTeam: 'GB',
+    awayTeam: 'MIN',
+    kickoffUtc: new Date(new Date().getTime() - 1000 * 60 * 60 * 2), // 2 hours ago
+    sportsbook: {
+      spreadHome: -2.5,
+      spreadAway: 2.5,
+      total: 45.5,
+      provider: 'DemoBook',
+    },
+    status: 'live',
+    homeScore: 14,
+    awayScore: 10,
+    quarter: 2,
+    timeRemaining: '02:15',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G4',
+    homeTeam: 'BUF',
+    awayTeam: 'MIA',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 2),
+    sportsbook: {
+      spreadHome: -7.0,
+      spreadAway: 7.0,
+      total: 49.0,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G5',
+    homeTeam: 'CIN',
+    awayTeam: 'PIT',
+    kickoffUtc: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 1),
+    sportsbook: {
+      spreadHome: -3.0,
+      spreadAway: 3.0,
+      total: 42.0,
+      provider: 'DemoBook',
+    },
+    status: 'final',
+    homeScore: 24,
+    awayScore: 20,
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G6',
+    homeTeam: 'DET',
+    awayTeam: 'CHI',
+    kickoffUtc: new Date(new Date().getTime() - 1000 * 60 * 60 * 1), // 1 hour ago
+    sportsbook: {
+      spreadHome: -6.5,
+      spreadAway: 6.5,
+      total: 47.5,
+      provider: 'DemoBook',
+    },
+    status: 'live',
+    homeScore: 7,
+    awayScore: 3,
+    quarter: 1,
+    timeRemaining: '08:45',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G7',
+    homeTeam: 'SF',
+    awayTeam: 'SEA',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: -9.5,
+      spreadAway: 9.5,
+      total: 44.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G8',
+    homeTeam: 'JAX',
+    awayTeam: 'TEN',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: -4.0,
+      spreadAway: 4.0,
+      total: 41.0,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G9',
+    homeTeam: 'ATL',
+    awayTeam: 'NO',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: -1.5,
+      spreadAway: 1.5,
+      total: 43.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G10',
+    homeTeam: 'NYG',
+    awayTeam: 'WAS',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: 2.5,
+      spreadAway: -2.5,
+      total: 40.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G11',
+    homeTeam: 'DEN',
+    awayTeam: 'LV',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: -3.0,
+      spreadAway: 3.0,
+      total: 42.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G12',
+    homeTeam: 'LAC',
+    awayTeam: 'NYJ',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: -5.0,
+      spreadAway: 5.0,
+      total: 46.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G13',
+    homeTeam: 'ARI',
+    awayTeam: 'LAR',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: 1.5,
+      spreadAway: -1.5,
+      total: 48.5,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G14',
+    homeTeam: 'TB',
+    awayTeam: 'CAR',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3),
+    sportsbook: {
+      spreadHome: -8.0,
+      spreadAway: 8.0,
+      total: 40.0,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G15',
+    homeTeam: 'CLE',
+    awayTeam: 'HOU',
+    kickoffUtc: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 2),
+    sportsbook: {
+      spreadHome: 4.0,
+      spreadAway: -4.0,
+      total: 44.0,
+      provider: 'DemoBook',
+    },
+    status: 'final',
+    homeScore: 17,
+    awayScore: 31,
+  },
+  {
+    season: 2025,
+    week: getCurrentNFLWeek(),
+    gameId: '2025_W15_DEMO_G16',
+    homeTeam: 'IND',
+    awayTeam: 'NE',
+    kickoffUtc: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 4),
+    sportsbook: {
+      spreadHome: -2.0,
+      spreadAway: 2.0,
+      total: 43.0,
+      provider: 'DemoBook',
+    },
+    status: 'scheduled',
+  },
+];
+
 const DemoScoreboard = () => {
   const [selectedWeek, setSelectedWeek] = useState(getCurrentNFLWeek());
   const [games, setGames] = useState<Game[]>([]);
@@ -709,19 +964,9 @@ const DemoScoreboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch schedule for selected week
-        const schedule = await scoresProvider.getWeekSchedule({ season: 2025, week: selectedWeek });
-        
-        // Get cached odds and scores
-        const [oddsMap, scores] = await Promise.all([
-          getCachedOddsForGames(schedule),
-          scoresProvider.getLiveScores({ gameIds: schedule.map(g => g.gameId) })
-        ]);
-        
-        // Merge data
-        const gamesData = schedule.map(game => 
-          mergeGameWithOddsAndScores(game, oddsMap, scores)
-        );
+        // Use realistic mock data instead of failing API call for demo purposes
+        // This ensures the demo always looks populated and "alive"
+        const gamesData = demoGamesList.map(g => ({ ...g, week: selectedWeek }));
 
         setGames(gamesData);
 
@@ -739,9 +984,8 @@ const DemoScoreboard = () => {
             }
         });
         setOpponentPicks(mockOpponentPicks);
-
-        // Reset User 1 picks on week change (or keep in state if we want persistence across week tabs in same session, 
-        // but simple reset is fine for demo)
+        
+        // Reset User 1 picks on week change
         setUserPicks({});
 
       } catch (error) {
