@@ -11,5 +11,3 @@ export const NFLFantasyPage = () => {
 
   return <NFLFantasy />;
 };
-
-
