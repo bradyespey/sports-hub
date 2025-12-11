@@ -18,7 +18,7 @@ const missingVars = requiredEnvVars.filter(varName => !import.meta.env[varName])
 // Export configuration status
 export const isFirebaseConfigured = missingVars.length === 0;
 export const firebaseConfigError = missingVars.length > 0 
-  ? `Missing required Firebase environment variables: ${missingVars.join(', ')}. Please copy .env.example to .env and configure your Firebase settings.`
+  ? `Missing required Firebase environment variables: ${missingVars.join(', ')}. Please create a .env file and configure your Firebase settings.`
   : null;
 
 let auth: Auth;

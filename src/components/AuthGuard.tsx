@@ -19,7 +19,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
             <CardDescription className="text-left">
               Firebase configuration is missing. Please:
               <br /><br />
-              1. Copy <code>.env.example</code> to <code>.env</code>
+              1. Create a <code>.env</code> file in the project root
               <br />
               2. Add your Firebase project settings
               <br />

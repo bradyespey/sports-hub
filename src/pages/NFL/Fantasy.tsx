@@ -225,8 +225,6 @@ export const NFLFantasy = () => {
     const currentNFLWeek = getCurrentNFLWeek();
     const lastWeekToConsider = Math.min(week - 1, currentNFLWeek - 1);
     
-    // console.log(`[Projections] Week ${week}: Looking at weeks 1-${lastWeekToConsider} for historical data`);
-    
     const provider = FantasyProviderFactory.createProvider();
     if (!provider) return roster;
     
@@ -272,11 +270,6 @@ export const NFLFantasy = () => {
       if (historicalPoints.length > 0) {
         const average = historicalPoints.reduce((sum, pts) => sum + pts, 0) / historicalPoints.length;
         projection = Math.round(average * 100) / 100;
-      }
-      
-      // Debug log for specific players (remove in production)
-      if (player.name.includes('St. Brown') || player.name.includes('Fields')) {
-        console.log(`[Projections] ${player.name} Week ${week}: Historical points:`, historicalPoints, `Projection: ${projection}`);
       }
       
       return {
