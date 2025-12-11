@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { refreshOddsNow, getLastOddsUpdate, type OddsRefreshResult } from "../lib/oddsClient";
 import { Button } from "./ui/button";
 import { RefreshCw, Clock } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 interface OddsRefreshButtonProps {
   season: number;
@@ -11,13 +12,20 @@ interface OddsRefreshButtonProps {
 }
 
 export function OddsRefreshButton({ season, week, className = "" }: OddsRefreshButtonProps) {
+  const { isDemo } = useAuth();
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [result, setResult] = useState<OddsRefreshResult | null>(null);
 
   async function syncLastUpdated() {
+    // Skip in demo mode
+    if (isDemo) {
+      setLastUpdated("Demo Mode");
+      return;
+    }
+    
     try {
-      const lastUpdate = await getLastOddsUpdate(season, week);
+      const lastUpdate = await getLastOddsUpdate(season, week, isDemo);
       if (lastUpdate) {
         setLastUpdated(lastUpdate.toLocaleString());
       } else {
@@ -31,7 +39,7 @@ export function OddsRefreshButton({ season, week, className = "" }: OddsRefreshB
 
   useEffect(() => {
     syncLastUpdated();
-  }, [season, week]);
+  }, [season, week, isDemo]);
 
   async function onClick() {
     setLoading(true);

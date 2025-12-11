@@ -89,10 +89,13 @@ export const useAuth = () => {
     }
   };
 
+  const isDemo = !loading && !user;
+
   return {
     user,
     loading,
     isAllowed,
+    isDemo,
     signInWithGoogle,
     signOut: signOutUser
   };

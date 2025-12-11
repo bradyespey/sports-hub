@@ -42,17 +42,28 @@ export async function refreshOddsNow(season: number, week: number): Promise<Odds
  * @param {number} week - The week number to check
  * @returns {Promise<Date | null>} The last update timestamp, or null if no update exists
  */
-export async function getLastOddsUpdate(season: number, week: number): Promise<Date | null> {
-  const { doc, getDoc } = await import('firebase/firestore');
-  const { db } = await import('./firebase');
-  
-  const weekId = `${season}_${String(week).padStart(2, "0")}`;
-  const snap = await getDoc(doc(db, "weeks", weekId));
-  const data = snap.data();
-  
-  if (data?.lastOddsFetchAt?.toDate) {
-    return data.lastOddsFetchAt.toDate();
+export async function getLastOddsUpdate(season: number, week: number, isDemo?: boolean): Promise<Date | null> {
+  // Skip Firestore access in demo mode
+  if (isDemo) {
+    return null;
   }
   
-  return null;
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const { db } = await import('./firebase');
+    
+    const weekId = `${season}_${String(week).padStart(2, "0")}`;
+    const snap = await getDoc(doc(db, "weeks", weekId));
+    const data = snap.data();
+    
+    if (data?.lastOddsFetchAt?.toDate) {
+      return data.lastOddsFetchAt.toDate();
+    }
+    
+    return null;
+  } catch (error) {
+    // Suppress Firestore permission errors in demo/public mode
+    console.warn("Failed to get last odds update:", error);
+    return null;
+  }
 }
