@@ -3,7 +3,7 @@
   command = "npm run build"
 
 [dev]
-  targetPort = 8080  # Vite dev server port
+  targetPort = 5178  # Vite dev server port
 
 [functions]
   node_bundler = "esbuild"
