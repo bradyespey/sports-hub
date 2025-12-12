@@ -15,7 +15,7 @@ Now features a **Public Demo Mode** that allows visitors to explore the full app
 - **Firebase Console**: https://console.firebase.google.com/project/sportshub-9dad7
 - **Netlify Dashboard**: https://app.netlify.com/sites/espeysportshub
 - **The Odds API**: https://the-odds-api.com/account (500 credits/month free)
-- **GitHub Actions**: Automated daily odds refresh at 2 AM CDT
+- **GitHub Actions**: Automated daily odds refresh at 2 AM CDT + weekly database backup (Friday 12:00 AM CT)
 
 ## Features & Demo Mode
 
