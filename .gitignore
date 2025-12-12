@@ -11,6 +11,9 @@ dist-ssr/
 *secrets.json
 *secret.json
 *token*.json
+.github/secrets/
+*service-account*.json
+firebase-adminsdk*.json
 
 # Database files
 *.db
