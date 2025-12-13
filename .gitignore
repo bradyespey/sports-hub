@@ -86,3 +86,8 @@ venv/
 # Temporary files
 *.temp
 *.tmp
+
+# Data backups (except .gitkeep and encrypted backups)
+data-backups/*
+!data-backups/.gitkeep
+!data-backups/*.encrypted.json
