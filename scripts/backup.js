@@ -28,6 +28,12 @@ if (encryptionKey.length !== 32) {
   process.exit(1);
 }
 
+console.log(`\n🏈 SportsHub Database Backup (Encrypted)`);
+console.log(`============================================================`);
+console.log(`Service account: ${serviceAccount.client_email}`);
+console.log(`Firebase project: ${serviceAccount.project_id}`);
+console.log(`============================================================\n`);
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -207,6 +213,26 @@ async function cleanupOldBackups(currentBackupDate) {
 }
 
 backup().catch(error => {
-  console.error('Backup failed:', error);
+  console.error('\n❌ Backup failed:', error.message);
+  
+  // Check for permission errors
+  if (error.code === 7 || error.message.includes('PERMISSION_DENIED') || error.message.includes('Missing or insufficient permissions')) {
+    console.error('\n🔒 Permission Error Detected');
+    console.error('============================================================');
+    console.error(`Service account: ${serviceAccount.client_email}`);
+    console.error(`Firebase project: ${serviceAccount.project_id}`);
+    console.error('============================================================');
+    console.error('\nTo fix this, grant Firestore read permissions:');
+    console.error('\n1. Go to Firebase Console:');
+    console.error(`   https://console.firebase.google.com/u/0/project/${serviceAccount.project_id}/settings/iam`);
+    console.error('\n2. Find the service account email above');
+    console.error('\n3. Click the edit (pencil) icon next to it');
+    console.error('\n4. Add role: "Cloud Datastore User" or "Firestore User"');
+    console.error('\n5. Save and wait 1-2 minutes for permissions to propagate');
+    console.error('\nAlternatively, use GCP Console:');
+    console.error(`   https://console.cloud.google.com/iam-admin/iam?project=${serviceAccount.project_id}`);
+    console.error('\nThen add role "Cloud Datastore User" to the service account.\n');
+  }
+  
   process.exit(1);
 });
