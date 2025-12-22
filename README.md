@@ -48,15 +48,46 @@ Visitors can access the site without logging in to experience the full UI:
 git clone https://github.com/bradyespey/sports-hub.git
 cd SportsHub
 npm install
-# Set up environment variables (see Environment section)
+
+# Install 1Password CLI (if not already installed)
+brew install --cask 1password-cli
+
+# Set up 1Password Environment (see Environment section below)
 npm run dev
 ```
 
-Open `http://localhost:8888` to view the application with Netlify functions.
+Open `http://localhost:5178` (Vite dev server) or `http://localhost:8888` (Netlify dev with functions).
 
 ## Environment
 
-Required environment variables for local development:
+**All projects use 1Password Developer Environments for local environment variables.** This allows seamless setup on any computer without managing local `.env` files.
+
+### 1Password Setup
+
+1. **Enable 1Password Developer**:
+   - Open 1Password desktop app
+   - Settings → Developer → Turn on "Show 1Password Developer experience"
+
+2. **Create Environment**:
+   - Go to Developer → Environments (Espey Family account)
+   - Create new environment: `SportsHub`
+   - Import `.env` file or add variables manually
+
+3. **Install 1Password CLI**:
+   ```bash
+   brew install --cask 1password-cli
+   ```
+
+4. **Run Project**:
+   ```bash
+   npm run dev
+   ```
+   - The `dev` script uses `op run --env-file=.env -- vite` to automatically load variables from 1Password
+   - No local `.env` file needed
+
+### Required Environment Variables
+
+All variables should be stored in your 1Password Environment:
 
 ```bash
 # Firebase Configuration
@@ -82,7 +113,7 @@ VITE_YAHOO_TEAM_NAME=Espeys in the Endzone
 # Netlify Functions (Server-side)
 FIREBASE_PROJECT_ID=sportshub-9dad7
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@sportshub-9dad7.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n" # Single line with \n escapes
 ODDS_API_KEY=YOUR_ODDS_API_KEY
 
 # Yahoo OAuth (Get from https://developer.yahoo.com/apps/)
