@@ -172,7 +172,12 @@ export const handler: Handler = async (event) => {
         if (cachedEspnData) {
           espnData = cachedEspnData;
         } else {
-      const espnResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${week}`);
+      // Determine seasonType: 2 for regular season (weeks 1-18), 3 for playoffs (weeks 19+)
+      const seasonType = week <= 18 ? 2 : 3;
+      // For playoffs, ESPN uses week 1-4 (not 19-22)
+      const espnWeek = week <= 18 ? week : week - 18;
+      
+      const espnResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=${seasonType}&week=${espnWeek}`);
       if (!espnResponse.ok) {
         throw new Error(`ESPN API error: ${espnResponse.status} ${espnResponse.statusText}`);
       }

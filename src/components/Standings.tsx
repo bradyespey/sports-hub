@@ -21,7 +21,21 @@ interface UserStats {
   seasonCorrect: number;
   seasonTotal: number;
   seasonPercentage: number;
+  weeklyPoints: number; // Weighted points for this week
+  seasonPoints: number; // Total weighted points for season
 }
+
+/**
+ * Get point value for a game based on week type
+ * Regular season: 1 point
+ * Wildcard, Divisional, Conference: 2 points
+ * Super Bowl: 3 points
+ */
+const getGamePointValue = (game: Game): number => {
+  if (!game.weekType || game.weekType === 'regular') return 1;
+  if (game.weekType === 'superbowl') return 3;
+  return 2; // wildcard, divisional, conference
+};
 
 export const Standings = ({ games, picks, currentUserId, opponentUserId, currentUserName, opponentUserName, selectedWeek }: StandingsProps) => {
   const calculateUserStats = (userId: string): UserStats => {
@@ -29,8 +43,10 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
     
     let weeklyCorrect = 0;
     let weeklyTotal = 0;
+    let weeklyPoints = 0;
     let seasonCorrect = 0;
     let seasonTotal = 0;
+    let seasonPoints = 0;
 
     // Calculate weekly stats (current week only)
     const currentWeekGames = games.filter(game => {
@@ -45,11 +61,13 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
       if (userPick) {
         const winner = game.homeScore! > game.awayScore! ? game.homeTeam : game.awayTeam;
         const isCorrect = userPick.selection === winner;
+        const pointValue = getGamePointValue(game);
         
         weeklyTotal++;
         
         if (isCorrect) {
           weeklyCorrect++;
+          weeklyPoints += pointValue;
         }
       }
     });
@@ -75,6 +93,8 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
         const winner = game.homeScore > game.awayScore ? game.homeTeam : game.awayTeam;
         if (pick.selection === winner) {
           seasonCorrect++;
+          const pointValue = getGamePointValue(game);
+          seasonPoints += pointValue;
         }
       }
     });
@@ -85,25 +105,37 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
       weeklyPercentage: weeklyTotal > 0 ? (weeklyCorrect / weeklyTotal) * 100 : 0,
       seasonCorrect,
       seasonTotal,
-      seasonPercentage: seasonTotal > 0 ? (seasonCorrect / seasonTotal) * 100 : 0
+      seasonPercentage: seasonTotal > 0 ? (seasonCorrect / seasonTotal) * 100 : 0,
+      weeklyPoints,
+      seasonPoints
     };
   };
 
   const currentUserStats = calculateUserStats(currentUserId);
   const opponentStats = opponentUserId ? calculateUserStats(opponentUserId) : null;
+  
+  // Determine if this is a playoff week
+  const isPlayoffWeek = selectedWeek > 18;
+  const currentWeekPointValue = isPlayoffWeek ? (selectedWeek === 22 ? 3 : 2) : 1;
 
   const getDisplayName = (userId: string) => {
     if (userId === currentUserId) return currentUserName || 'You';
     return opponentUserName || 'Opponent';
   };
 
-  const weeklyLeader = opponentStats && currentUserStats.weeklyCorrect !== opponentStats.weeklyCorrect
+  // For weekly leader, compare weighted points (or correct picks if tied)
+  const weeklyLeader = opponentStats && currentUserStats.weeklyPoints !== opponentStats.weeklyPoints
+    ? (currentUserStats.weeklyPoints > opponentStats.weeklyPoints ? currentUserId : opponentUserId)
+    : (opponentStats && currentUserStats.weeklyCorrect !== opponentStats.weeklyCorrect
     ? (currentUserStats.weeklyCorrect > opponentStats.weeklyCorrect ? currentUserId : opponentUserId)
-    : null;
+        : null);
 
-  const seasonLeader = opponentStats && currentUserStats.seasonCorrect !== opponentStats.seasonCorrect
+  // For season leader, compare weighted points (or correct picks if tied)
+  const seasonLeader = opponentStats && currentUserStats.seasonPoints !== opponentStats.seasonPoints
+    ? (currentUserStats.seasonPoints > opponentStats.seasonPoints ? currentUserId : opponentUserId)
+    : (opponentStats && currentUserStats.seasonCorrect !== opponentStats.seasonCorrect
     ? (currentUserStats.seasonCorrect > opponentStats.seasonCorrect ? currentUserId : opponentUserId)
-    : null;
+        : null);
 
   return (
     <Card className="standings-card">
@@ -112,6 +144,18 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
           <Trophy className="w-5 h-5 text-primary" />
           <span>Standings</span>
         </CardTitle>
+        {isPlayoffWeek && (
+          <div className="text-sm text-muted-foreground mt-2">
+            <Badge variant="secondary" className="mr-2">
+              {selectedWeek === 22 ? '🏆 Super Bowl' : '🔥 Playoffs'}
+            </Badge>
+            <span>
+              {selectedWeek === 22 
+                ? '3 points per correct pick' 
+                : '2 points per correct pick'}
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Weekly Standings */}
@@ -126,10 +170,17 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
                 <span className="font-medium">{getDisplayName(currentUserId)}</span>
                 {weeklyLeader === currentUserId && <Trophy className="w-4 h-4 text-primary" />}
               </div>
-              <div className="text-2xl font-bold">{currentUserStats.weeklyCorrect}/{currentUserStats.weeklyTotal}</div>
+              <div className="text-2xl font-bold">
+                {currentUserStats.weeklyCorrect}/{currentUserStats.weeklyTotal}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {currentUserStats.weeklyPercentage.toFixed(0)}%
               </div>
+              {isPlayoffWeek && (
+                <div className="mt-2 text-lg font-semibold text-primary">
+                  {currentUserStats.weeklyPoints} pts
+                </div>
+              )}
             </div>
             
             {opponentStats && (
@@ -138,10 +189,17 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
                   <span className="font-medium">{getDisplayName(opponentUserId!)}</span>
                   {weeklyLeader === opponentUserId && <Trophy className="w-4 h-4 text-primary" />}
                 </div>
-                <div className="text-2xl font-bold">{opponentStats.weeklyCorrect}/{opponentStats.weeklyTotal}</div>
+                <div className="text-2xl font-bold">
+                  {opponentStats.weeklyCorrect}/{opponentStats.weeklyTotal}
+                </div>
                 <div className="text-sm text-muted-foreground">
                   {opponentStats.weeklyPercentage.toFixed(0)}%
                 </div>
+                {isPlayoffWeek && (
+                  <div className="mt-2 text-lg font-semibold text-primary">
+                    {opponentStats.weeklyPoints} pts
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -159,9 +217,14 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
                 <span className="font-medium">{getDisplayName(currentUserId)}</span>
                 {seasonLeader === currentUserId && <Trophy className="w-4 h-4 text-primary" />}
               </div>
-              <div className="text-2xl font-bold">{currentUserStats.seasonCorrect}/{currentUserStats.seasonTotal}</div>
+              <div className="text-2xl font-bold">
+                {currentUserStats.seasonCorrect}/{currentUserStats.seasonTotal}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {currentUserStats.seasonPercentage.toFixed(0)}%
+              </div>
+              <div className="mt-2 text-lg font-semibold text-primary">
+                {currentUserStats.seasonPoints} pts
               </div>
             </div>
             
@@ -171,9 +234,14 @@ export const Standings = ({ games, picks, currentUserId, opponentUserId, current
                   <span className="font-medium">{getDisplayName(opponentUserId!)}</span>
                   {seasonLeader === opponentUserId && <Trophy className="w-4 h-4 text-primary" />}
                 </div>
-                <div className="text-2xl font-bold">{opponentStats.seasonCorrect}/{opponentStats.seasonTotal}</div>
+                <div className="text-2xl font-bold">
+                  {opponentStats.seasonCorrect}/{opponentStats.seasonTotal}
+                </div>
                 <div className="text-sm text-muted-foreground">
                   {opponentStats.seasonPercentage.toFixed(0)}%
+                </div>
+                <div className="mt-2 text-lg font-semibold text-primary">
+                  {opponentStats.seasonPoints} pts
                 </div>
               </div>
             )}

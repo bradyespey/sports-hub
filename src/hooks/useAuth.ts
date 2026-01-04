@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, googleProvider, db, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, googleProvider, db } from '@/lib/firebase';
 import { User } from '@/types';
 
 export const useAuth = () => {
@@ -13,12 +13,6 @@ export const useAuth = () => {
   const allowedEmails = import.meta.env.VITE_ALLOWED_EMAILS?.split(',').map((email: string) => email.trim()) || [];
 
   useEffect(() => {
-    // If Firebase is not configured, set loading to false and return early
-    if (!isFirebaseConfigured) {
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       setLoading(true);
       
@@ -64,10 +58,6 @@ export const useAuth = () => {
   }, []);
 
   const signInWithGoogle = async () => {
-    if (!isFirebaseConfigured) {
-      throw new Error('Firebase is not configured');
-    }
-    
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
@@ -77,10 +67,6 @@ export const useAuth = () => {
   };
 
   const signOutUser = async () => {
-    if (!isFirebaseConfigured) {
-      throw new Error('Firebase is not configured');
-    }
-    
     try {
       await signOut(auth);
     } catch (error) {

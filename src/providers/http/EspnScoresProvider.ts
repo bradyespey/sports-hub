@@ -33,6 +33,42 @@ const espnCache = new ESPNCache();
 export class EspnScoresProvider implements ScoresProvider {
   private baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
+  /**
+   * Determine week type based on week number
+   * Week 1-18: Regular season
+   * Week 19: Wild Card
+   * Week 20: Divisional
+   * Week 21: Conference Championships
+   * Week 22: Super Bowl
+   */
+  private getWeekType(week: number): 'regular' | 'wildcard' | 'divisional' | 'conference' | 'superbowl' {
+    if (week <= 18) return 'regular';
+    if (week === 19) return 'wildcard';
+    if (week === 20) return 'divisional';
+    if (week === 21) return 'conference';
+    return 'superbowl';
+  }
+
+  /**
+   * Get ESPN seasonType based on week number
+   * seasonType=2: Regular season (weeks 1-18)
+   * seasonType=3: Postseason (weeks 19-22)
+   */
+  private getSeasonType(week: number): number {
+    return week <= 18 ? 2 : 3;
+  }
+
+  /**
+   * Get ESPN week number for API call
+   * Regular season: week as-is (1-18)
+   * Playoffs: reset to 1-4 for postseason weeks
+   */
+  private getEspnWeekNumber(week: number): number {
+    if (week <= 18) return week;
+    // Playoff weeks: 19->1, 20->2, 21->3, 22->4
+    return week - 18;
+  }
+
   async getWeekSchedule({ season, week }: { season: number; week: number }): Promise<GameMeta[]> {
     try {
       // Check cache first (30 minutes for schedule data)
@@ -44,8 +80,11 @@ export class EspnScoresProvider implements ScoresProvider {
         data = cachedData;
       } else {
         // ESPN API endpoint for NFL schedule
+        const seasonType = this.getSeasonType(week);
+        const espnWeek = this.getEspnWeekNumber(week);
+        
         const response = await fetch(
-          `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`
+          `${this.baseUrl}/scoreboard?seasontype=${seasonType}&week=${espnWeek}`
         );
 
         if (!response.ok) {
@@ -58,6 +97,8 @@ export class EspnScoresProvider implements ScoresProvider {
         // Cache for 30 minutes (schedule doesn't change frequently)
         espnCache.set(cacheKey, data, 30 * 60 * 1000);
       }
+      
+      const weekType = this.getWeekType(week);
       
       const events = data.events?.map((event: any) => {
         const competition = event.competitions[0];
@@ -76,6 +117,7 @@ export class EspnScoresProvider implements ScoresProvider {
           gameId: `${season}-W${week.toString().padStart(2, '0')}-${normalizedAway}-${normalizedHome}`,
           season,
           week,
+          weekType,
           kickoffUtc: new Date(event.date),
           homeTeam: normalizedHome,
           awayTeam: normalizedAway,
@@ -111,8 +153,11 @@ export class EspnScoresProvider implements ScoresProvider {
       } else {
         // For live scores, we'll fetch the requested week's scoreboard
         // ESPN doesn't have a direct endpoint for specific game IDs, so we fetch all and filter
+        const seasonType = this.getSeasonType(week);
+        const espnWeek = this.getEspnWeekNumber(week);
+        
         const response = await fetch(
-          `${this.baseUrl}/scoreboard?seasontype=2&week=${week}`
+          `${this.baseUrl}/scoreboard?seasontype=${seasonType}&week=${espnWeek}`
         );
 
         if (!response.ok) {

@@ -19,6 +19,7 @@ export interface Week {
 export interface Game {
   season: number;
   week: number;
+  weekType?: 'regular' | 'wildcard' | 'divisional' | 'conference' | 'superbowl';
   gameId: string;
   kickoffUtc: Date;
   homeTeam: string;
@@ -59,6 +60,7 @@ export interface GameMeta {
   gameId: string;
   season: number;
   week: number;
+  weekType?: 'regular' | 'wildcard' | 'divisional' | 'conference' | 'superbowl';
   kickoffUtc: Date;
   homeTeam: string;
   awayTeam: string;

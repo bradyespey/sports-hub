@@ -5,12 +5,13 @@ import type { OddsRefreshRequest, OddsRefreshResponse, OddsDoc, WeekDoc, UsageDo
 export class OddsService {
   
   async refreshOdds(request: OddsRefreshRequest): Promise<OddsRefreshResponse> {
-    // Use different URLs for local dev vs production
-    const baseUrl = import.meta.env.DEV 
-      ? 'http://localhost:8888' 
-      : '';
+    // For development, use production URL as fallback since local Netlify dev can be complex
+    // This allows the app to work with just `npm run dev` (Vite) without needing `npm run dev:netlify`
+    const functionsUrl = import.meta.env.DEV 
+      ? "https://sportshub.theespeys.com/.netlify/functions/odds_refresh"
+      : "/.netlify/functions/odds_refresh";
     
-    const response = await fetch(`${baseUrl}/.netlify/functions/odds_refresh`, {
+    const response = await fetch(functionsUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -19,7 +20,8 @@ export class OddsService {
     });
 
     if (!response.ok) {
-      throw new Error(`Odds refresh failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Odds refresh failed: ${response.status} ${errorText}`);
     }
 
     return response.json();

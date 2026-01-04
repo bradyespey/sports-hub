@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "op run --env-file=.env -- vite",
+    "dev": "./scripts/load-env-and-run.sh",
     "dev:local": "vite",
     "dev:netlify": "netlify dev",
     "build": "vite build",

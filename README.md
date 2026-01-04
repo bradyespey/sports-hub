@@ -30,6 +30,10 @@ Visitors can access the site without logging in to experience the full UI:
 ### Core Features
 - **Strategic Picks**: Picks are hidden until kickoff or until both users have picked.
 - **Live Updates**: Real-time scores and game status.
+- **Playoff Scoring**: Weighted scoring system for postseason games:
+  - Regular season (Weeks 1-18): 1 point per correct pick
+  - Wild Card, Divisional, Conference (Weeks 19-21): 2 points per correct pick
+  - Super Bowl (Week 22): 3 points per correct pick
 - **Yahoo Fantasy**: Integrated fantasy football roster and matchup viewing.
 - **Depth Charts**: Detailed team rosters and depth charts.
 
@@ -179,6 +183,7 @@ Manual deploy: Push to GitHub `main` branch
 - **Preseason Handling**: Alphabetical sorting for 0-0 records before season starts
 - **Conference Layout**: AFC divisions on left, NFC divisions on right
 - **Division Order**: North → East → South → West within each conference
+- **Playoff Scoring Display**: Standings page shows weighted points for playoff weeks with visual indicators (2x for playoffs, 3x for Super Bowl)
 
 ## Directory Map
 

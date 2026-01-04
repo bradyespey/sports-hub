@@ -62,10 +62,12 @@ export const WeekSelector: React.FC<WeekSelectorProps> = ({
         value={currentWeek.toString()}
         onValueChange={(value) => onWeekChange(parseInt(value))}
       >
-        <SelectTrigger className="w-32 h-8">
-          <SelectValue />
+        <SelectTrigger className="w-auto min-w-[120px] h-8 px-3">
+          <SelectValue>
+            {getWeekLabel(currentWeek)}
+          </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-[300px]">
           {availableWeeks.map((week) => (
             <SelectItem key={week} value={week.toString()}>
               {getWeekLabel(week)}

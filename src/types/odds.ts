@@ -1,6 +1,7 @@
 export interface GameDoc {
   season: number;
   week: number;
+  weekType?: 'regular' | 'wildcard' | 'divisional' | 'conference' | 'superbowl';
   gameId: string;
   kickoffUtc: Date;
   homeTeam: string;
