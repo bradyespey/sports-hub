@@ -19,8 +19,12 @@ if [ ! -e .env ]; then
   exit 1
 fi
 
-# Read .env (FIFO or regular file) and export variables
-# Vite reads from process.env for VITE_ prefixed variables
-export $(cat .env | grep -v "^#" | grep "=" | xargs)
+# Load .env (FIFO or regular file) safely.
+# The previous `export $(cat .env | ... | xargs)` approach breaks on quoted values
+# (ex: FIREBASE_PRIVATE_KEY with spaces / \n escapes) and can produce noisy errors.
+set -a
+# shellcheck disable=SC1091
+. ./.env
+set +a
 
 exec npx vite

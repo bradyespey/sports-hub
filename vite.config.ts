@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 5178,
+    strictPort: true, // Fail if port is already in use instead of using next available port
     watch: {
       ignored: ['**/.env', '**/.env.*', '**/.env.fifo'],
     },

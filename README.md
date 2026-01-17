@@ -4,7 +4,7 @@
 
 ## Overview
 
-A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, Yahoo Fantasy Football integration, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts, real-time standings calculation, and NFL tiebreaking procedures.
+A modern, mobile-first NFL picks application enabling Brady and Jenny to compete in weekly outright winner predictions. Features strategic pick reveals, live scores from ESPN API, betting odds from The Odds API, automated daily updates via GitHub Actions, and a clean Fox Sports-inspired design with comprehensive team depth charts, real-time standings calculation, and NFL tiebreaking procedures.
 
 Now features a **Public Demo Mode** that allows visitors to explore the full application functionality with real-time data but mocked user information.
 
@@ -24,7 +24,7 @@ Visitors can access the site without logging in to experience the full UI:
 - **Real-Time Data**: Uses realistic mock NFL schedules with proper team abbreviations for logo display
 - **Privacy First**: Masks real user identities as "User 1" and "User 2"
 - **Mock Interaction**: "User 1" (visitor) can make local-only picks to test the interface, while "User 2" (opponent) has pre-filled mock picks
-- **Full Scope**: Includes demo versions of the Scoreboard (16 games with Live/Upcoming/Final statuses), Standings, and Fantasy pages
+- **Full Scope**: Includes demo versions of the Scoreboard (16 games with Live/Upcoming/Final statuses) and Standings
 - **Team Logos**: All team logos display correctly using standard NFL abbreviations (BAL, KC, PHI, etc.)
 
 ### Core Features
@@ -34,14 +34,13 @@ Visitors can access the site without logging in to experience the full UI:
   - Regular season (Weeks 1-18): 1 point per correct pick
   - Wild Card, Divisional, Conference (Weeks 19-21): 2 points per correct pick
   - Super Bowl (Week 22): 3 points per correct pick
-- **Yahoo Fantasy**: Integrated fantasy football roster and matchup viewing.
 - **Depth Charts**: Detailed team rosters and depth charts.
 
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
 - **Backend**: Firebase Auth + Firestore + Netlify Functions
-- **APIs**: ESPN API (scores/teams), The Odds API (betting lines), Yahoo Fantasy API
+- **APIs**: ESPN API (scores/teams), The Odds API (betting lines)
 - **Deployment**: Netlify with continuous integration
 - **Automation**: GitHub Actions for daily odds refresh
 - **Domain**: sportshub.theespeys.com via Cloudflare DNS
@@ -109,29 +108,16 @@ VITE_ALLOWED_EMAILS=YOUR_EMAIL@gmail.com,PARTNER_EMAIL@gmail.com
 VITE_ODDS_API_KEY=YOUR_ODDS_API_KEY
 VITE_USE_MOCK=false
 
-# Yahoo Fantasy Football
-VITE_FANTASY_PROVIDER=yahoo
-VITE_YAHOO_LEAGUE_ID=590446
-VITE_YAHOO_TEAM_NAME=Espeys in the Endzone
-
 # Netlify Functions (Server-side)
 FIREBASE_PROJECT_ID=sportshub-9dad7
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@sportshub-9dad7.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n" # Single line with \n escapes
 ODDS_API_KEY=YOUR_ODDS_API_KEY
-
-# Yahoo OAuth (Get from https://developer.yahoo.com/apps/)
-YAHOO_CLIENT_ID=YOUR_YAHOO_CLIENT_ID
-YAHOO_CLIENT_SECRET=YOUR_YAHOO_CLIENT_SECRET
-YAHOO_REFRESH_TOKEN=YOUR_YAHOO_REFRESH_TOKEN
-YAHOO_REDIRECT_URI=http://localhost:8888/.netlify/functions/yahoo-auth-callback
 ```
-
-**Note**: See `YAHOO_FANTASY_SETUP.md` for detailed Yahoo Fantasy integration setup instructions.
 
 ## Run Modes
 
-- **Development**: `npm run dev` — Vite dev server at localhost:5173 (fast development)
+- **Development**: `npm run dev` — Vite dev server at localhost:5178 (fast development)
 - **Netlify Dev**: `npm run dev:netlify` — Full Netlify dev server with functions at localhost:8888
 - **Production**: `npm run build` — Optimized build for deployment
 
@@ -164,7 +150,6 @@ Manual deploy: Push to GitHub `main` branch
 
 - **/** — Redirects directly to Scores page
 - **/nfl/scoreboard** — Main picks interface with live scores and odds (default landing page)
-- **/nfl/fantasy** — Yahoo Fantasy Football team roster and matchups (when enabled)
 - **/nfl/standings** — Weekly and season standings between Brady and Jenny
 - **/nfl/teams** — Team directory with logos, divisions, records, win percentages, and depth chart links
 - **/nfl/teams/:teamId** — Individual team depth charts (offense, defense, special teams)
@@ -174,7 +159,7 @@ Manual deploy: Push to GitHub `main` branch
 - **Sticky Navigation**: NFL nav bar stays fixed when scrolling
 - **Current Week Button**: Quick navigation back to current week from past/future weeks
 - **Interactive Tooltips**: Click-only help tooltips on each page with page-specific guidance
-- **Page Order**: Scores → Fantasy → Standings → Teams (reorganized for better UX)
+- **Page Order**: Scores → Standings → Teams
 
 ### Team Records & Standings
 - **Live Records**: Real-time team records displayed on Scores and Teams pages
@@ -199,7 +184,6 @@ SportsHub/
 │   │   └── NFL/           # Route components
 │   ├── providers/         # Data provider implementations
 │   │   ├── http/          # ESPN/Odds API providers
-│   │   └── fantasy/       # Sleeper/Yahoo integration
 │   ├── lib/               # Firebase config, utilities, and NFL tiebreaking
 │   └── types/             # TypeScript definitions
 ├── netlify/
@@ -208,29 +192,19 @@ SportsHub/
 │       ├── daily_odds.ts  # Scheduled automation (GitHub Actions)
 │       ├── pulse.ts       # Real-time odds/scores monitoring with usage tracking
 │       ├── schedule_daily.ts # Daily scheduled function for odds refresh
-│       ├── yahoo-fantasy.ts # Yahoo Fantasy API proxy with caching
-│       ├── yahoo-auth.ts  # Yahoo OAuth authentication flow
-│       ├── yahoo-auth-callback.ts # Yahoo OAuth callback handler
-│       └── yahoo-manual-token.ts # Yahoo token refresh utility
 ├── scripts/               # Data seeding and utilities
 └── docs/                  # Project documentation (archived)
 ```
 
 ## Netlify Functions
 
-The application uses 8 serverless functions for backend operations:
+The application uses 4 serverless functions for backend operations:
 
 ### Data Management Functions
 - **`odds_refresh.ts`** — Manual odds refresh endpoint with caching logic
 - **`daily_odds.ts`** — Scheduled automation triggered by GitHub Actions at 2 AM CDT
 - **`pulse.ts`** — Real-time monitoring with API usage tracking and intelligent refresh intervals
 - **`schedule_daily.ts`** — Daily scheduled function for automated odds refresh
-
-### Yahoo Fantasy Integration Functions  
-- **`yahoo-fantasy.ts`** — Main API proxy with caching, rate limiting, and error handling
-- **`yahoo-auth.ts`** — OAuth authentication flow initiation
-- **`yahoo-auth-callback.ts`** — OAuth callback handler for token exchange
-- **`yahoo-manual-token.ts`** — Manual token refresh utility for development
 
 ### Function Features
 - **Caching Strategy**: Firestore persistence for completed weeks (instant loading)
@@ -268,55 +242,11 @@ The application uses 8 serverless functions for backend operations:
    - Check Firestore security rules for proper user isolation
    - Verify game status and kickoff times
 
-6. **Yahoo Fantasy Integration Issues**
-   - Verify Yahoo OAuth credentials are valid and not expired
-   - Check league ID and team name match your Yahoo Fantasy league
-   - Use manual token refresh at `http://localhost:8888/.netlify/functions/yahoo-manual-token`
-   - Ensure `VITE_FANTASY_PROVIDER=yahoo` is set in environment variables
-
-## Fantasy Football Integration
-
-The app integrates with Yahoo Fantasy Football to display:
-- Team roster with individual player fantasy points and detailed game statistics
-- Live matchup scores during games
-- All league matchups for the current week
-- Player-by-player matchup comparison with stats display
-- League-specific scoring calculations
-- Rolling average projections based on historical performance
-- Mobile-responsive matchup interface
-
-**Setup**: See `YAHOO_FANTASY_SETUP.md` for complete integration instructions.
-
-**Features**:
-- Read-only access via Yahoo OAuth
-- Automatic token refresh
-- **Individual player fantasy points** calculated from league scoring settings
-- **Detailed game statistics** (e.g., "283 Pass Yds, 2 Pass TD, 2 2-PT")
-- Real-time stat updates during games
-- Full PPR, Half PPR, or Standard scoring support
-- **Smart rolling average projections** excluding zero-point weeks (bye weeks/injuries)
-- **Intelligent historical data fetching** for mid-season pickups (fetches missing player data from API)
-- **Firestore persistence** for completed weeks (instant loading)
-- **Mobile-responsive design** with card-based layout for small screens
-- Conditional display (only shows when `VITE_FANTASY_PROVIDER=yahoo`)
-
-**Technical Details**: See `docs/FANTASY_SCORING_IMPLEMENTATION.md` for implementation details.
-
 ## Next Steps / Future Work
 
 ### 🏈 Advanced Features (Priority 3)
-- **Fantasy Enhancements**: Historical matchups, league standings integration
 - **NCAAF Support**: Add college football league support
 - **Multi-User Support**: Expand beyond Brady and Jenny (future)
-
-## Future Fantasy Enhancements
-
-Possible additions if you want more features:
-- Historical week matchups
-- League standings integration
-- Player add/drop notifications (would require write access)
-- Projected vs actual points charts
-- Integration with NFL Picks standings
 
 ## Documentation
 

@@ -79,25 +79,6 @@ export interface GameScore {
   network?: string;
 }
 
-export interface FantasyTeam {
-  teamId: string;
-  name: string;
-  owner: string;
-}
-
-export interface FantasyMatchup {
-  teamId: string;
-  opponentTeamId: string;
-  pointsFor: number;
-  pointsAgainst: number;
-  status: 'not_started' | 'in_progress' | 'final';
-}
-
-export interface FantasyLeague {
-  name: string;
-  season: number;
-}
-
 // Re-export odds types
 export type { 
   GameDoc, 

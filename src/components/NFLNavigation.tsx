@@ -2,7 +2,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getCurrentNFLWeek } from '@/lib/dayjs';
-import { FantasyProviderFactory } from '@/providers/fantasy/FantasyProviderFactory';
 
 interface NFLNavigationProps {
   onScoresClick?: () => void;
@@ -11,7 +10,6 @@ interface NFLNavigationProps {
 export const NFLNavigation = ({ onScoresClick }: NFLNavigationProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const fantasyEnabled = FantasyProviderFactory.isEnabled();
 
   const handleScoresClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -26,7 +24,7 @@ export const NFLNavigation = ({ onScoresClick }: NFLNavigationProps) => {
 
   const navItems = [
     { label: 'SCORES', path: '/nfl/scoreboard', onClick: handleScoresClick },
-    ...(fantasyEnabled ? [{ label: 'FANTASY', path: '/nfl/fantasy' }] : []),
+    { label: 'PRIZES', path: '/nfl/prizes' },
     { label: 'STANDINGS', path: '/nfl/standings' },
     { label: 'TEAMS', path: '/nfl/teams' },
   ];

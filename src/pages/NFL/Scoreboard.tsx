@@ -384,7 +384,7 @@ export const NFLScoreboard = () => {
       <div className="container mx-auto px-4 py-4 space-y-4">
         {/* Week Selector */}
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
-          <div className="flex flex-col space-y-3 overflow-hidden">
+          <div className="flex flex-col space-y-3">
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div className="flex flex-col items-center space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
                 <WeekSelector
@@ -1031,7 +1031,7 @@ const DemoScoreboard = () => {
 
         {/* Week Selector */}
         <div className="sticky top-16 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b py-4 mb-6">
-          <div className="flex flex-col space-y-3 overflow-hidden">
+          <div className="flex flex-col space-y-3">
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div className="flex flex-col items-center space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
                 <WeekSelector
