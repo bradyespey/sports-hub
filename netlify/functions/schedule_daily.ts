@@ -25,7 +25,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     // Call odds refresh with daily mode
-    const refreshUrl = `${process.env.URL || 'https://localhost:8888'}/.netlify/functions/odds_refresh`;
+    const refreshUrl = `${process.env.URL || 'http://localhost:8890'}/.netlify/functions/odds_refresh`;
     
     const response = await fetch(refreshUrl, {
       method: 'POST',

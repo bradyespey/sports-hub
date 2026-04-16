@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "op run --env-file=.env -- ./node_modules/.bin/vite",
     "dev:local": "vite",
-    "dev:netlify": "netlify dev",
+    "dev:all": "op run --env-file=.env -- netlify dev --port 8890 --targetPort 5178",
+    "dev:netlify": "npm run dev:all",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

@@ -59,7 +59,7 @@ brew install --cask 1password-cli
 npm run dev
 ```
 
-Open `http://localhost:5178` (Vite dev server) or `http://localhost:8888` (Netlify dev with functions).
+Open `http://localhost:5178` (Vite dev server) or `http://localhost:8890` (Netlify dev with functions).
 
 ## Environment
 
@@ -118,13 +118,13 @@ ODDS_API_KEY=YOUR_ODDS_API_KEY
 ## Run Modes
 
 - **Development**: `npm run dev` — Vite dev server at localhost:5178 (fast development)
-- **Netlify Dev**: `npm run dev:netlify` — Full Netlify dev server with functions at localhost:8888
+- **Netlify Dev**: `npm run dev:all` — Full Netlify dev server with functions at localhost:8890
 - **Production**: `npm run build` — Optimized build for deployment
 
 ## Scripts and Ops
 
 - **Development**: `npm run dev` — Start Vite dev server (fast development)
-- **Netlify Dev**: `npm run dev:netlify` — Start Netlify dev server with functions
+- **Netlify Dev**: `npm run dev:all` — Start Netlify dev server with functions
 - **Build**: `npm run build` — Create production build
 - **Deploy & Watch**: `npm run deploy:watch` — Push to GitHub and monitor Netlify build
 - **Seed Data**: `npm run seed:nfl2025` — Generate complete 2025 NFL season
@@ -233,7 +233,7 @@ The application uses 4 serverless functions for backend operations:
    - Verify h2h market parameter in API calls
 
 4. **Firebase Auth Issues**
-   - Add authorized domains in Firebase Console (localhost:8888, production URLs)
+   - Add authorized domains in Firebase Console (localhost:8890, production URLs)
    - Check email allowlist in VITE_ALLOWED_EMAILS
    - Verify Google OAuth configuration
 

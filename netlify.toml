@@ -4,6 +4,7 @@
 
 [dev]
   targetPort = 5178  # Vite dev server port
+  port = 8890
 
 [functions]
   node_bundler = "esbuild"
