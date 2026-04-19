@@ -51,11 +51,6 @@ Visitors can access the site without logging in to experience the full UI:
 git clone https://github.com/bradyespey/sports-hub.git
 cd SportsHub
 npm install
-
-# Install 1Password CLI (if not already installed)
-brew install --cask 1password-cli
-
-# Set up 1Password Environment (see Environment section below)
 npm run dev
 ```
 
@@ -63,34 +58,12 @@ Open `http://localhost:5178` (Vite dev server) or `http://localhost:8890` (Netli
 
 ## Environment
 
-**All projects use 1Password Developer Environments for local environment variables.** This allows seamless setup on any computer without managing local `.env` files.
-
-### 1Password Setup
-
-1. **Enable 1Password Developer**:
-   - Open 1Password desktop app
-   - Settings → Developer → Turn on "Show 1Password Developer experience"
-
-2. **Create Environment**:
-   - Go to Developer → Environments (Espey Family account)
-   - Create new environment: `SportsHub`
-   - Import `.env` file or add variables manually
-
-3. **Install 1Password CLI**:
-   ```bash
-   brew install --cask 1password-cli
-   ```
-
-4. **Run Project**:
-   ```bash
-   npm run dev
-   ```
-   - The `dev` script uses `op run --env-file=.env -- vite` to automatically load variables from 1Password
-   - No local `.env` file needed
+Copy `.env.example` to `.env` and fill in values. See `.env.example` for all required variables.
 
 ### Required Environment Variables
 
-All variables should be stored in your 1Password Environment:
+All variables should be set in `.env` (copy from `.env.example`):
+
 
 ```bash
 # Firebase Configuration
